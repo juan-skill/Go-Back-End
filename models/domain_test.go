@@ -25,7 +25,8 @@ func TestNewDomainSuccess(t *testing.T) {
 
 	//servers := createListServer()
 
-	domain, err := NewDomain("cae0ae1d-45bd-4dda-b939-cfb34569052b", false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+	domain, err := NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+
 	c.NoError(err)
 	c.NotEmpty(domain.DomainID)
 	c.NotNil(domain.CreationDate)
@@ -37,25 +38,22 @@ func TestNewDomainWithWrongParams(t *testing.T) {
 
 	//servers := createListServer()
 
-	_, err := NewDomain("", false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
-	c.EqualError(ErrEmptyServers, err.Error())
-
-	_, err = NewDomain("cae0ae1d-45bd-4dda-b939-cfb34569052b", false, false, "", "B", "https://server.com/icon.png", "Title of the page")
+	_, err := NewDomain(false, false, "", "B", "https://server.com/icon.png", "Title of the page")
 	c.EqualError(ErrEmptySSLGrade, err.Error())
 
-	_, err = NewDomain("cae0ae1d-45bd-4dda-b939-cfb34569052b", false, false, "A+", "", "https://server.com/icon.png", "Title of the page")
+	_, err = NewDomain(false, false, "A+", "", "https://server.com/icon.png", "Title of the page")
 	c.EqualError(ErrEmptyPSSLGrade, err.Error())
 
-	_, err = NewDomain("cae0ae1d-45bd-4dda-b939-cfb34569052b", false, false, "A+", "B", "", "Title of the page")
+	_, err = NewDomain(false, false, "A+", "B", "", "Title of the page")
 	c.EqualError(ErrEmptyLogo, err.Error())
 
-	_, err = NewDomain("cae0ae1d-45bd-4dda-b939-cfb34569052b", false, false, "A+", "B", "https://server.com/icon.png", "")
+	_, err = NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "")
 	c.EqualError(ErrEmptyTitle, err.Error())
 }
 
 func BenchmarkNewDomain(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		_, err := NewDomain("cae0ae1d-45bd-4dda-b939-cfb34569052b", false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+		_, err := NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
 		if err != nil {
 			b.Fatal(err)
 		}

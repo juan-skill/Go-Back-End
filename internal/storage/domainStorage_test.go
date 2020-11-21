@@ -11,16 +11,19 @@ import (
 func storeDomainTest(t *testing.T) *models.Domain {
 	c := require.New(t)
 
+	InitCockroach()
 	// create a new Server
-	server := storeServerTest(t)
+	//server := storeServerTest(t)
 
 	// create a new Domain
-	domain, err := models.NewDomain(server.ServerID, false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+	domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 	c.NotNil(domain)
 
 	domain1, err := StoreDomain(domain)
 	c.NoError(err)
+	c.NotEmpty(domain1)
+
 	c.NotEmpty(domain1)
 	c.Equal(domain.DomainID, domain1.DomainID)
 	c.Equal(domain.ServerChanged, domain1.ServerChanged)
@@ -29,7 +32,8 @@ func storeDomainTest(t *testing.T) *models.Domain {
 	c.Equal(domain.Logo, domain1.Logo)
 	c.Equal(domain.Title, domain1.Title)
 	c.Equal(domain.IsDown, domain1.IsDown)
-	c.Equal(domain.ServerID, domain1.ServerID)
+
+	//c.Equal(domain.ServerID, domain1.ServerID)
 
 	return domain
 }
@@ -62,7 +66,7 @@ func TestGetDomain(t *testing.T) {
 	c.NoError(err)
 	c.NotEmpty(domain1)
 
-	c.Equal(domain.ServerID, domain1.ServerID)
+	//c.Equal(domain.ServerID, domain1.ServerID)
 	c.Equal(domain.DomainID, domain1.DomainID)
 	c.Equal(domain.ServerChanged, domain1.ServerChanged)
 	c.Equal(domain.SSLGrade, domain1.SSLGrade)
@@ -70,7 +74,7 @@ func TestGetDomain(t *testing.T) {
 	c.Equal(domain.Logo, domain1.Logo)
 	c.Equal(domain.Title, domain1.Title)
 	c.Equal(domain.IsDown, domain1.IsDown)
-	c.Equal(domain.ServerID, domain1.ServerID)
+	//c.Equal(domain.ServerID, domain1.ServerID)
 	c.WithinDuration(*domain.CreationDate, *domain1.CreationDate, time.Second)
 }
 
@@ -103,14 +107,14 @@ func TestUpdateDomain(t *testing.T) {
 
 	c.NotEqual(domain.SSLGrade, domain1.SSLGrade)
 	c.Equal(domain1.SSLGrade, "A")
-	c.Equal(domain.ServerID, domain1.ServerID)
+	//c.Equal(domain.ServerID, domain1.ServerID)
 	c.Equal(domain.DomainID, domain1.DomainID)
 	c.Equal(domain.ServerChanged, domain1.ServerChanged)
 	c.Equal(domain.PreviousSSLGrade, domain1.PreviousSSLGrade)
 	c.Equal(domain.Logo, domain1.Logo)
 	c.Equal(domain.Title, domain1.Title)
 	c.Equal(domain.IsDown, domain1.IsDown)
-	c.Equal(domain.ServerID, domain1.ServerID)
+	//c.Equal(domain.ServerID, domain1.ServerID)
 	c.WithinDuration(*domain.CreationDate, *domain.CreationDate, time.Second)
 }
 
@@ -189,19 +193,8 @@ func BenchmarkStoreDomain(b *testing.B) {
 	InitCockroach()
 
 	for i := 0; i < b.N; i++ {
-		// create a new Server
-		server, err := models.NewServer("server1", "B", "US", "Amazon.com, Inc.")
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		server, err = StoreServer(server)
-		if err != nil {
-			b.Fatal(err)
-		}
-
 		// create a new Domain
-		domain, err := models.NewDomain(server.ServerID, false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+		domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
 		if err != nil {
 			b.Fatal(err)
 		}

@@ -21,7 +21,7 @@ var (
 // Domain model structure for domain
 type Domain struct {
 	DomainID         string     `json:"domain_id"`
-	ServerID         string     `json:"server_id"`
+	Servers          []*Server  `json:"servers"`
 	ServerChanged    bool       `json:"servers_changed"`
 	SSLGrade         string     `json:"ssl_grade"`
 	PreviousSSLGrade string     `json:"previous_ssl_grade"`
@@ -32,14 +32,8 @@ type Domain struct {
 	UpdateDate       *time.Time `json:"update_date"`
 }
 
-//Servers          []*string  `json:"servers"`
-
 // NewDomain Initialize a new domain
-func NewDomain(serverID string, serverChanged, isdown bool, sslGrade, pSSLGrade, logo, title string) (domain *Domain, err error) {
-	if serverID == "" {
-		return nil, ErrEmptyServers
-	}
-
+func NewDomain(serverChanged, isdown bool, sslGrade, pSSLGrade, logo, title string) (domain *Domain, err error) {
 	if sslGrade == "" {
 		return nil, ErrEmptySSLGrade
 	}
@@ -66,7 +60,6 @@ func NewDomain(serverID string, serverChanged, isdown bool, sslGrade, pSSLGrade,
 
 	domain = &Domain{
 		DomainID:         domainID.String(),
-		ServerID:         serverID,
 		ServerChanged:    serverChanged,
 		SSLGrade:         sslGrade,
 		PreviousSSLGrade: pSSLGrade,

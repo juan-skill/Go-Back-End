@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -19,18 +20,32 @@ func storeServerTest(t *testing.T) *models.Server {
 
 	InitCockroach()
 
+	domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+	c.NoError(err)
+	c.NotEmpty(domain)
+
+	domain, err = StoreDomain(domain)
+	c.NoError(err)
+	c.NotEmpty(domain)
+
 	// create a new Server
-	server, err := models.NewServer("server1", "B", "US", "Amazon.com, Inc.")
+	server, err := models.NewServer("server1", "B", "US", "Amazon.com, Inc.", domain)
 	c.NoError(err)
 	c.NotNil(server)
 
 	server1, err := StoreServer(server)
 	c.NoError(err)
 	c.NotEmpty(server1)
+
 	c.Equal(server.ServerID, server1.ServerID)
 	c.Equal(server.Address, server1.Address)
 	c.Equal(server.SSLGrade, server1.SSLGrade)
 	c.Equal(server.Country, server1.Country)
+
+	domain.Servers = append(domain.Servers, server1)
+
+	fmt.Println(domain.Servers)
+	c.Equal(domain.DomainID, domain.Servers[0].Domain.DomainID)
 
 	return server1
 }
@@ -68,6 +83,7 @@ func TestGetServer(t *testing.T) {
 	c.Equal(server1.SSLGrade, server.SSLGrade)
 	c.Equal(server1.Country, server.Country)
 	c.WithinDuration(*server.CreationDate, *server1.CreationDate, time.Second)
+	c.NotEmpty(server1.Domain.DomainID)
 }
 
 func TestGetServerFailure(t *testing.T) {
@@ -101,6 +117,8 @@ func TestUpdateServer(t *testing.T) {
 	c.Equal(server1.SSLGrade, "A")
 	c.Equal(server1.Country, server.Country)
 	c.WithinDuration(*server.CreationDate, *server1.CreationDate, time.Second)
+
+	c.NotEmpty(server1.Domain.DomainID)
 }
 
 func TestUpdateServerFailure(t *testing.T) {
@@ -169,8 +187,19 @@ func BenchmarkStoreServer(b *testing.B) {
 	InitCockroach()
 
 	for i := 0; i < b.N; i++ {
+		InitCockroach()
+
+		domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		domain, err = StoreDomain(domain)
+		if err != nil {
+			b.Fatal(err)
+		}
 		// create a new Server
-		server, err := models.NewServer("server1", "B", "US", "Amazon.com, Inc.")
+		server, err := models.NewServer("server1", "B", "US", "Amazon.com, Inc.", domain)
 		if err != nil {
 			b.Fatal(err)
 		}

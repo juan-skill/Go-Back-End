@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/other_project/crockroach/models"
@@ -18,11 +19,10 @@ const (
 		logo,
 		title,
 		isdown,
-		server_id,
 		creationDate,
 		updateDate
 	) VALUES (
-		$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+		$1, $2, $3, $4, $5, $6, $7, $8, $9
 	) RETURNING *;
 	`
 	listDomains = `
@@ -67,8 +67,9 @@ func (q *Queries) StoreDomain(domain *models.Domain) (*models.Domain, error) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	row := CockroachClient.QueryRowContext(ctx, createDomain, domain.DomainID, domain.ServerChanged, domain.SSLGrade, domain.PreviousSSLGrade, domain.Logo, domain.Title, domain.IsDown, domain.ServerID, domain.CreationDate, domain.UpdateDate)
+	row := CockroachClient.QueryRowContext(ctx, createDomain, domain.DomainID, domain.ServerChanged, domain.SSLGrade, domain.PreviousSSLGrade, domain.Logo, domain.Title, domain.IsDown, domain.CreationDate, domain.UpdateDate)
 	if row.Err() != nil {
+		fmt.Println(row.Err())
 		//logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
@@ -83,7 +84,6 @@ func (q *Queries) StoreDomain(domain *models.Domain) (*models.Domain, error) {
 		&item.Logo,
 		&item.Title,
 		&item.IsDown,
-		&item.ServerID,
 		&item.CreationDate,
 		&item.UpdateDate,
 	)
@@ -92,9 +92,11 @@ func (q *Queries) StoreDomain(domain *models.Domain) (*models.Domain, error) {
 		return nil, ErrScanRow
 	}
 
-	if *item == (models.Domain{}) {
-		return nil, ErrServerNotFound
-	}
+	/*
+		if *item == (models.Domain{}) {
+			return nil, ErrServerNotFound
+		}
+	*/
 
 	return item, nil
 }
@@ -124,7 +126,6 @@ func (q *Queries) GetDomain(domainID string) (*models.Domain, error) {
 		&item.Logo,
 		&item.Title,
 		&item.IsDown,
-		&item.ServerID,
 		&item.CreationDate,
 		&item.UpdateDate,
 	)
@@ -132,11 +133,11 @@ func (q *Queries) GetDomain(domainID string) (*models.Domain, error) {
 		//logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
 	}
-
-	if *item == (models.Domain{}) {
-		return nil, ErrServerNotFound
-	}
-
+	/*
+		if *item == (models.Domain{}) {
+			return nil, ErrServerNotFound
+		}
+	*/
 	return item, nil
 }
 
@@ -164,7 +165,6 @@ func (q *Queries) GetDomains() ([]models.Domain, error) {
 			&item.Logo,
 			&item.Title,
 			&item.IsDown,
-			&item.ServerID,
 			&item.CreationDate,
 			&item.UpdateDate,
 		); err != nil {
@@ -215,7 +215,6 @@ func (q *Queries) UpdateDomain(domainID, sslgrade string) (*models.Domain, error
 		&item.Logo,
 		&item.Title,
 		&item.IsDown,
-		&item.ServerID,
 		&item.CreationDate,
 		&item.UpdateDate,
 	)
@@ -223,11 +222,12 @@ func (q *Queries) UpdateDomain(domainID, sslgrade string) (*models.Domain, error
 		return nil, ErrScanRow
 	}
 
-	if *item == (models.Domain{}) {
-		//logs.Log().Errorf("cannot be founded the server %s ", ErrServerNotFound.Error())
-		return nil, ErrDomainNotFound
-	}
-
+	/*
+		if *item == (models.Domain{}) {
+			//logs.Log().Errorf("cannot be founded the server %s ", ErrServerNotFound.Error())
+			return nil, ErrDomainNotFound
+		}
+	*/
 	return item, err
 }
 

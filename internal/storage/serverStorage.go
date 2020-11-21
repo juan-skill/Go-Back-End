@@ -6,7 +6,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/other_project/crockroach/internal/logs"
 	"github.com/other_project/crockroach/models"
 	"github.com/other_project/crockroach/shared/env"
 )
@@ -19,10 +18,11 @@ const (
 		sslgrade,
 		country,
 		owner,
+		domain_id,
 		creationDate,
 		updateDate 
 	) VALUES (
-		$1, $2, $3, $4, $5, $6, $7
+		$1, $2, $3, $4, $5, $6, $7, $8
 	) RETURNING *;
 	`
 
@@ -83,22 +83,35 @@ func (q *Queries) StoreServer(server *models.Server) (*models.Server, error) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	row := CockroachClient.QueryRowContext(ctx, createServer, server.ServerID, server.Address, server.SSLGrade, server.Country, server.Owner, server.CreationDate, server.UpdateDate)
+	row := CockroachClient.QueryRowContext(ctx, createServer, server.ServerID, server.Address, server.SSLGrade, server.Country, server.Owner, server.Domain.DomainID, server.CreationDate, server.UpdateDate)
 	if row.Err() != nil {
-		logs.Log().Errorf("Query error %s", row.Err())
+		//logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
 
 	item := new(models.Server)
+	item.Domain = new(models.Domain)
 
-	err := row.Scan(&item.ServerID, &item.Address, &item.SSLGrade, &item.Country, &item.Owner, &item.CreationDate, &item.UpdateDate)
+	err := row.Scan(
+		&item.ServerID,
+		&item.Address,
+		&item.SSLGrade,
+		&item.Country,
+		&item.Owner,
+		&item.Domain.DomainID,
+		&item.CreationDate,
+		&item.UpdateDate)
 	if err != nil {
-		logs.Log().Errorf("Scan error %s", err.Error())
+		//logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
 	}
 
 	if *item == (models.Server{}) {
 		return nil, ErrServerNotFound
+	}
+
+	if item.Domain.DomainID == server.Domain.DomainID {
+		item.Domain = server.Domain
 	}
 
 	return item, nil
@@ -120,14 +133,29 @@ func (q *Queries) GetServer(serverID string) (*models.Server, error) {
 	}
 
 	item := new(models.Server)
+	item.Domain = new(models.Domain)
 
-	err := row.Scan(&item.ServerID, &item.Address, &item.SSLGrade, &item.Country, &item.Owner, &item.CreationDate, &item.UpdateDate)
+	err := row.Scan(
+		&item.ServerID,
+		&item.Address,
+		&item.SSLGrade,
+		&item.Country,
+		&item.Owner,
+		&item.Domain.DomainID,
+		&item.CreationDate,
+		&item.UpdateDate)
 	if err != nil {
+		//logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
 	}
 
 	if *item == (models.Server{}) {
 		return nil, ErrServerNotFound
+	}
+
+	item.Domain, err = GetDomain(item.Domain.DomainID)
+	if err != nil {
+		return nil, err
 	}
 
 	return item, nil
@@ -149,15 +177,23 @@ func (q *Queries) GetServers() ([]models.Server, error) {
 
 	for rows.Next() {
 		item := new(models.Server)
-		if err := rows.Scan(
+
+		item.Domain = new(models.Domain)
+		if err = rows.Scan(
 			&item.ServerID,
 			&item.Owner,
 			&item.Address,
 			&item.SSLGrade,
 			&item.Country,
+			&item.Domain.DomainID,
 			&item.CreationDate,
 			&item.UpdateDate,
 		); err != nil {
+			return nil, err
+		}
+
+		item.Domain, err = GetDomain(item.Domain.DomainID)
+		if err != nil {
 			return nil, err
 		}
 
@@ -196,15 +232,29 @@ func (q *Queries) UpdateServer(serverID, sslgrade string) (*models.Server, error
 	}
 
 	item := new(models.Server)
+	item.Domain = new(models.Domain)
 
-	err := row.Scan(&item.ServerID, &item.Address, &item.SSLGrade, &item.Country, &item.Owner, &item.CreationDate, &item.UpdateDate)
+	err := row.Scan(
+		&item.ServerID,
+		&item.Address,
+		&item.SSLGrade,
+		&item.Country,
+		&item.Owner,
+		&item.Domain.DomainID,
+		&item.CreationDate,
+		&item.UpdateDate)
 	if err != nil {
+		//logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
 	}
 
 	if *item == (models.Server{}) {
-		//logs.Log().Errorf("cannot be founded the server %s ", ErrServerNotFound.Error())
 		return nil, ErrServerNotFound
+	}
+
+	item.Domain, err = GetDomain(item.Domain.DomainID)
+	if err != nil {
+		return nil, err
 	}
 
 	return item, err
