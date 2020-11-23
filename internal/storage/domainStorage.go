@@ -3,9 +3,9 @@ package storage
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/other_project/crockroach/internal/logs"
 	"github.com/other_project/crockroach/models"
 )
 
@@ -51,16 +51,16 @@ const (
 var (
 	// ErrInvalidDomain to ensure if exists domain
 	ErrInvalidDomain = errors.New("invalid domain object")
-	// ErrEmptyDomainID in
-	ErrEmptyDomainID = errors.New("cannot be empty server_id")
-	// ErrDomainNotFound to ensure that server are returned
-	ErrDomainNotFound = errors.New("server was not found")
+	// ErrEmptyDomainID when it's
+	ErrEmptyDomainID = errors.New("cannot be empty domain_id")
+	// ErrDomainNotFound to ensure that domain are returned
+	ErrDomainNotFound = errors.New("domain was not found")
 )
 
 // StoreDomain function will store a domain struct
 func (q *Queries) StoreDomain(domain *models.Domain) (*models.Domain, error) {
 	if domain == nil {
-		//logs.Log().Errorf("cannot store server in database %s ", ErrInvalidServer.Error())
+		logs.Log().Errorf("cannot store domain in database %s ", ErrInvalidDomain.Error())
 		return nil, ErrInvalidDomain
 	}
 
@@ -69,8 +69,7 @@ func (q *Queries) StoreDomain(domain *models.Domain) (*models.Domain, error) {
 
 	row := CockroachClient.QueryRowContext(ctx, createDomain, domain.DomainID, domain.ServerChanged, domain.SSLGrade, domain.PreviousSSLGrade, domain.Logo, domain.Title, domain.IsDown, domain.CreationDate, domain.UpdateDate)
 	if row.Err() != nil {
-		fmt.Println(row.Err())
-		//logs.Log().Errorf("Query error %s", row.Err())
+		logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
 
@@ -88,15 +87,9 @@ func (q *Queries) StoreDomain(domain *models.Domain) (*models.Domain, error) {
 		&item.UpdateDate,
 	)
 	if err != nil {
-		//logs.Log().Errorf("Scan error %s", err.Error())
+		logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
 	}
-
-	/*
-		if *item == (models.Domain{}) {
-			return nil, ErrServerNotFound
-		}
-	*/
 
 	return item, nil
 }
@@ -104,7 +97,7 @@ func (q *Queries) StoreDomain(domain *models.Domain) (*models.Domain, error) {
 // GetDomain function will get a domain struct by domainID
 func (q *Queries) GetDomain(domainID string) (*models.Domain, error) {
 	if domainID == "" {
-		//¿logs.Log().Errorf("cannot store server in database %s ", ErrEmptyServerID.Error())
+		logs.Log().Errorf("cannot store domain in database %s ", ErrEmptyDomainID.Error())
 		return nil, ErrEmptyDomainID
 	}
 
@@ -113,6 +106,7 @@ func (q *Queries) GetDomain(domainID string) (*models.Domain, error) {
 
 	row := CockroachClient.QueryRowContext(ctx, getDomain, domainID)
 	if row.Err() != nil {
+		logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
 
@@ -130,14 +124,10 @@ func (q *Queries) GetDomain(domainID string) (*models.Domain, error) {
 		&item.UpdateDate,
 	)
 	if err != nil {
-		//logs.Log().Errorf("Scan error %s", err.Error())
+		logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
 	}
-	/*
-		if *item == (models.Domain{}) {
-			return nil, ErrServerNotFound
-		}
-	*/
+
 	return item, nil
 }
 
@@ -148,10 +138,9 @@ func (q *Queries) GetDomains() ([]models.Domain, error) {
 
 	rows, err := CockroachClient.QueryContext(ctx, listDomains, Limit, Offset)
 	if err != nil {
+		logs.Log().Errorf("Query error %s", err.Error())
 		return nil, ErrInvalidQuery
 	}
-
-	//defer rows.Close()
 
 	items := []models.Domain{}
 
@@ -168,6 +157,7 @@ func (q *Queries) GetDomains() ([]models.Domain, error) {
 			&item.CreationDate,
 			&item.UpdateDate,
 		); err != nil {
+			logs.Log().Errorf("Scan error %s", err.Error())
 			return nil, err
 		}
 
@@ -175,10 +165,12 @@ func (q *Queries) GetDomains() ([]models.Domain, error) {
 	}
 
 	if err := rows.Close(); err != nil {
+		logs.Log().Errorf("Row error close %s", err.Error())
 		return nil, err
 	}
 
 	if err := rows.Err(); err != nil {
+		logs.Log().Errorf("Row error %s", err.Error())
 		return nil, err
 	}
 
@@ -188,12 +180,12 @@ func (q *Queries) GetDomains() ([]models.Domain, error) {
 // UpdateDomain function will update a domain struct
 func (q *Queries) UpdateDomain(domainID, sslgrade string) (*models.Domain, error) {
 	if domainID == "" {
-		//logs.Log().Errorf("cannot be empty server_id attribute %s ", ErrEmptyServerID.Error())
+		logs.Log().Errorf("cannot be empty domain_id attribute %s ", ErrEmptyDomainID.Error())
 		return nil, ErrEmptyDomainID
 	}
 
 	if sslgrade == "" {
-		//logs.Log().Errorf("cannot be empty sslgrade attribute %s ", ErrEmptySSLGrade.Error())
+		logs.Log().Errorf("cannot be empty sslgrade attribute %s ", ErrEmptySSLGrade.Error())
 		return nil, ErrEmptySSLGrade
 	}
 
@@ -202,6 +194,7 @@ func (q *Queries) UpdateDomain(domainID, sslgrade string) (*models.Domain, error
 
 	row := CockroachClient.QueryRowContext(ctx, updateDomain, domainID, sslgrade)
 	if row.Err() != nil {
+		logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
 
@@ -219,23 +212,18 @@ func (q *Queries) UpdateDomain(domainID, sslgrade string) (*models.Domain, error
 		&item.UpdateDate,
 	)
 	if err != nil {
+		logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
 	}
 
-	/*
-		if *item == (models.Domain{}) {
-			//logs.Log().Errorf("cannot be founded the server %s ", ErrServerNotFound.Error())
-			return nil, ErrDomainNotFound
-		}
-	*/
 	return item, err
 }
 
 // DeleteDomain function will update a domain struct
 func (q *Queries) DeleteDomain(domainID string) error {
 	if domainID == "" {
-		//logs.Log().Errorf("cannot be empty server_id attribute %s ", ErrEmptyServerID.Error())
-		return ErrEmptyServerID
+		logs.Log().Errorf("cannot be empty domain_id attribute %s ", ErrEmptyDomainID.Error())
+		return ErrEmptyDomainID
 	}
 
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
@@ -243,11 +231,13 @@ func (q *Queries) DeleteDomain(domainID string) error {
 
 	row, err := CockroachClient.ExecContext(ctx, deleteDomain, domainID)
 	if err != nil {
+		logs.Log().Errorf("Query error %s", err.Error())
 		return ErrInvalidQuery
 	}
 
 	result, _ := row.RowsAffected()
 	if result == 0 {
+		logs.Log().Errorf("Query error %s", ErrZeroRowsAffected.Error())
 		return ErrZeroRowsAffected
 	}
 

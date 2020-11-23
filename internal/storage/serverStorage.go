@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/other_project/crockroach/internal/logs"
 	"github.com/other_project/crockroach/models"
 	"github.com/other_project/crockroach/shared/env"
 )
@@ -67,16 +68,18 @@ var (
 	ErrServerNotFound = errors.New("server was not found")
 	// ErrZeroRowsAffected when try to delete a record does not exists
 	ErrZeroRowsAffected = errors.New("cannot record that does not exist")
+	// ErrEmptyList there are not element
+	ErrEmptyList = errors.New("there are not elements")
 	// Limit fdfddfgdf
 	Limit = env.GetInt64("LIMIT_QUERY", 5)
 	// Offset fdf
 	Offset = env.GetInt64("OFFSET_QUERY", 5)
 )
 
-// StoreServer function will store a domain struct
+// StoreServer function will store a server struct
 func (q *Queries) StoreServer(server *models.Server) (*models.Server, error) {
 	if server == nil {
-		//logs.Log().Errorf("cannot store server in database %s ", ErrInvalidServer.Error())
+		logs.Log().Errorf("cannot store server in database %s ", ErrInvalidServer.Error())
 		return nil, ErrInvalidServer
 	}
 
@@ -85,7 +88,7 @@ func (q *Queries) StoreServer(server *models.Server) (*models.Server, error) {
 
 	row := CockroachClient.QueryRowContext(ctx, createServer, server.ServerID, server.Address, server.SSLGrade, server.Country, server.Owner, server.Domain.DomainID, server.CreationDate, server.UpdateDate)
 	if row.Err() != nil {
-		//logs.Log().Errorf("Query error %s", row.Err())
+		logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
 
@@ -102,12 +105,8 @@ func (q *Queries) StoreServer(server *models.Server) (*models.Server, error) {
 		&item.CreationDate,
 		&item.UpdateDate)
 	if err != nil {
-		//logs.Log().Errorf("Scan error %s", err.Error())
+		logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
-	}
-
-	if *item == (models.Server{}) {
-		return nil, ErrServerNotFound
 	}
 
 	if item.Domain.DomainID == server.Domain.DomainID {
@@ -120,7 +119,7 @@ func (q *Queries) StoreServer(server *models.Server) (*models.Server, error) {
 // GetServer function will get a server struct by ServerID
 func (q *Queries) GetServer(serverID string) (*models.Server, error) {
 	if serverID == "" {
-		//¿logs.Log().Errorf("cannot store server in database %s ", ErrEmptyServerID.Error())
+		logs.Log().Errorf("cannot store server in database %s ", ErrEmptyServerID.Error())
 		return nil, ErrEmptyServerID
 	}
 
@@ -129,6 +128,7 @@ func (q *Queries) GetServer(serverID string) (*models.Server, error) {
 
 	row := CockroachClient.QueryRowContext(ctx, getServer, serverID)
 	if row.Err() != nil {
+		logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
 
@@ -145,12 +145,8 @@ func (q *Queries) GetServer(serverID string) (*models.Server, error) {
 		&item.CreationDate,
 		&item.UpdateDate)
 	if err != nil {
-		//logs.Log().Errorf("Scan error %s", err.Error())
+		logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
-	}
-
-	if *item == (models.Server{}) {
-		return nil, ErrServerNotFound
 	}
 
 	item.Domain, err = GetDomain(item.Domain.DomainID)
@@ -168,10 +164,9 @@ func (q *Queries) GetServers() ([]models.Server, error) {
 
 	rows, err := CockroachClient.QueryContext(ctx, listServers, Limit, Offset)
 	if err != nil {
+		logs.Log().Errorf("Query error %s", err.Error())
 		return nil, ErrInvalidQuery
 	}
-
-	//defer rows.Close()
 
 	items := []models.Server{}
 
@@ -201,10 +196,12 @@ func (q *Queries) GetServers() ([]models.Server, error) {
 	}
 
 	if err := rows.Close(); err != nil {
+		logs.Log().Errorf("Row error close %s", err.Error())
 		return nil, err
 	}
 
 	if err := rows.Err(); err != nil {
+		logs.Log().Errorf("Row error %s", err.Error())
 		return nil, err
 	}
 
@@ -214,12 +211,12 @@ func (q *Queries) GetServers() ([]models.Server, error) {
 // UpdateServer function will update a server struct
 func (q *Queries) UpdateServer(serverID, sslgrade string) (*models.Server, error) {
 	if serverID == "" {
-		//logs.Log().Errorf("cannot be empty server_id attribute %s ", ErrEmptyServerID.Error())
+		logs.Log().Errorf("cannot be empty server_id attribute %s ", ErrEmptyServerID.Error())
 		return nil, ErrEmptyServerID
 	}
 
 	if sslgrade == "" {
-		//logs.Log().Errorf("cannot be empty sslgrade attribute %s ", ErrEmptySSLGrade.Error())
+		logs.Log().Errorf("cannot be empty sslgrade attribute %s ", ErrEmptySSLGrade.Error())
 		return nil, ErrEmptySSLGrade
 	}
 
@@ -228,6 +225,7 @@ func (q *Queries) UpdateServer(serverID, sslgrade string) (*models.Server, error
 
 	row := CockroachClient.QueryRowContext(ctx, updateServer, serverID, sslgrade)
 	if row.Err() != nil {
+		logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
 
@@ -244,12 +242,8 @@ func (q *Queries) UpdateServer(serverID, sslgrade string) (*models.Server, error
 		&item.CreationDate,
 		&item.UpdateDate)
 	if err != nil {
-		//logs.Log().Errorf("Scan error %s", err.Error())
+		logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
-	}
-
-	if *item == (models.Server{}) {
-		return nil, ErrServerNotFound
 	}
 
 	item.Domain, err = GetDomain(item.Domain.DomainID)
@@ -263,7 +257,7 @@ func (q *Queries) UpdateServer(serverID, sslgrade string) (*models.Server, error
 // DeleteServer function will update a server struct
 func (q *Queries) DeleteServer(serverID string) error {
 	if serverID == "" {
-		//logs.Log().Errorf("cannot be empty server_id attribute %s ", ErrEmptyServerID.Error())
+		logs.Log().Errorf("cannot be empty server_id attribute %s ", ErrEmptyServerID.Error())
 		return ErrEmptyServerID
 	}
 
@@ -272,6 +266,7 @@ func (q *Queries) DeleteServer(serverID string) error {
 
 	row, err := CockroachClient.ExecContext(ctx, deleteServer, serverID)
 	if err != nil {
+		logs.Log().Errorf("Query error %s", err.Error())
 		return ErrInvalidQuery
 	}
 

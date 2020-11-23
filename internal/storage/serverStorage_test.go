@@ -1,18 +1,98 @@
 package storage
 
 import (
-	"fmt"
+	"context"
+	"database/sql"
 	"testing"
 	"time"
 
+	"github.com/other_project/crockroach/internal/logs"
 	"github.com/other_project/crockroach/models"
 	"github.com/other_project/crockroach/shared/cockroachdb"
 	"github.com/stretchr/testify/require"
 )
 
 func InitCockroach() {
+	_ = logs.InitLogger()
 	// CockroachClient creates a connection with the CockroachDB
 	CockroachClient = *cockroachdb.NewSQLClient()
+
+	tx, err := CockroachClient.Begin()
+	if err != nil {
+		//logs.Log().Errorf("cannot create transaction")
+		_ = tx.Rollback()
+		return
+	}
+
+	sqlStm := `CREATE TABLE IF NOT EXISTS domains (
+						id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+						serverChanged bool NOT NULL,
+						sslgrade STRING NULL,
+						previousslgrade STRING NULL,
+						logo STRING NOT NULL,
+						title STRING NULL,
+						isdown bool NULL,
+						creationDate TIMESTAMPTZ NOT NULL DEFAULT (now()),
+						updateDate TIMESTAMPTZ NOT NULL DEFAULT (now())
+					)
+					`
+
+	err = createTables(tx, sqlStm)
+	if err != nil {
+		_ = tx.Rollback()
+		return
+	}
+
+	sqlStm = `CREATE TABLE IF NOT EXISTS servers (
+				id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				address STRING NOT NULL,
+				sslgrade STRING NULL,
+				country STRING NULL,
+				owner STRING NULL,
+				domain_id UUID REFERENCES domains (id) ON DELETE CASCADE,
+				creationDate TIMESTAMPTZ NOT NULL DEFAULT (now()),
+				updateDate TIMESTAMPTZ NOT NULL DEFAULT (now())
+			)
+			`
+
+	err = createTables(tx, sqlStm)
+	if err != nil {
+		_ = tx.Rollback()
+		return
+	}
+
+	_ = tx.Commit()
+}
+
+func createTables(tx *sql.Tx, query string) error {
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	sqlStm, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		logs.Log().Errorf(err.Error())
+		return err
+	}
+
+	result, err := sqlStm.ExecContext(ctx)
+	if err != nil {
+		logs.Log().Errorf(err.Error())
+		return err
+	}
+
+	_, err = result.RowsAffected()
+	if err != nil {
+		logs.Log().Errorf(err.Error())
+		return err
+	}
+
+	err = sqlStm.Close()
+	if err != nil {
+		logs.Log().Errorf(err.Error())
+		return err
+	}
+
+	return nil
 }
 
 func storeServerTest(t *testing.T) *models.Server {
@@ -44,7 +124,6 @@ func storeServerTest(t *testing.T) *models.Server {
 
 	domain.Servers = append(domain.Servers, server1)
 
-	fmt.Println(domain.Servers)
 	c.Equal(domain.DomainID, domain.Servers[0].Domain.DomainID)
 
 	return server1
@@ -181,6 +260,9 @@ func TestGetServers(t *testing.T) {
 	for _, server := range servers {
 		c.NotEmpty(server)
 	}
+
+	servers = nil
+	c.Nil(servers)
 }
 
 func BenchmarkStoreServer(b *testing.B) {
