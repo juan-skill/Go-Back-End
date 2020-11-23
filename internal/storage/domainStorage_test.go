@@ -16,6 +16,7 @@ func storeDomainTest(t *testing.T) *models.Domain {
 	//server := storeServerTest(t)
 
 	// create a new Domain
+
 	domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 	c.NotNil(domain)
@@ -33,9 +34,7 @@ func storeDomainTest(t *testing.T) *models.Domain {
 	c.Equal(domain.Title, domain1.Title)
 	c.Equal(domain.IsDown, domain1.IsDown)
 
-	//c.Equal(domain.ServerID, domain1.ServerID)
-
-	return domain
+	return domain1
 }
 
 func TestStoreDomain(t *testing.T) {
@@ -136,7 +135,7 @@ func TestUpdateDomainFailure(t *testing.T) {
 	domain, err = UpdateDomain("", "A")
 	c.Error(err)
 	c.Nil(domain)
-	c.EqualError(ErrEmptyServerID, err.Error())
+	c.EqualError(ErrEmptyDomainID, err.Error())
 
 	domain, err = UpdateDomain("cae0ae1d-45bd-4dda-b938-cfb34569052b", "B")
 	c.Error(err)

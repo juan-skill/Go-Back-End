@@ -12,17 +12,24 @@ import (
 	"github.com/other_project/crockroach/shared/env"
 )
 
+var (
+	// UserName  data to connect with Database Cliente
+	UserName = env.GetString("DATABASE_USERNAME", "test")
+	// HostName data to connect with Database Cliente
+	HostName = env.GetString("DATABASE_HOSTNAME", "localhost")
+	// Port data to connect with Database Cliente
+	Port = env.GetString("DATABASE_PORT", "26257")
+	// DatabaseName data to connect with Database Cliente
+	DatabaseName = env.GetString("DATABASE_NAME", "testdb")
+	// DriverName data to connect with Database Cliente
+	DriverName = env.GetString("DATABASE_DRIVER", "postgres")
+)
+
 // NewSQLClient function will create a new sql client
 func NewSQLClient() *sql.DB {
-	address := env.GetString("COCKROACH_ADDRESS", "test@localhost:26257")
-	db := env.GetString("COCKROACH_DATABASE", "testdb")
-
-	//"postgresql://test@localhost:26257/testdb?sslmode=disable"
-	// postgres://<username>:<password>@<host>:<port>/<database>?<parameters>
-
 	database, err := sql.Open(
-		"postgres",
-		fmt.Sprintf("postgresql://%s/%s?sslmode=disable", address, db),
+		DriverName,
+		fmt.Sprintf("postgresql://%s@%s:%s/%s?sslmode=disable", UserName, HostName, Port, DatabaseName),
 	)
 	if err != nil {
 		logs.Log().Errorf("Error connecting to the database:  %s", err.Error())
@@ -30,9 +37,9 @@ func NewSQLClient() *sql.DB {
 	}
 
 	/* Control number of session: problem chech coverage
-	database.SetMaxOpenConns(20)
-	database.SetMaxIdleConns(20)
-	database.SetConnMaxLifetime(time.Minute * 5)
+	   database.SetMaxOpenConns(20)
+	   database.SetMaxIdleConns(20)
+	   database.SetConnMaxLifetime(time.Minute * 5)
 	*/
 
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
