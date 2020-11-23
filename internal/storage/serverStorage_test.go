@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+/*
 func InitCockroach() {
 	_ = logs.InitLogger()
 	// CockroachClient creates a connection with the CockroachDB
@@ -20,6 +21,60 @@ func InitCockroach() {
 	tx, err := CockroachClient.Begin()
 	if err != nil {
 		//logs.Log().Errorf("cannot create transaction")
+		_ = tx.Rollback()
+		return
+	}
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	sqlStm := `ALTER TABLE IF EXISTS servers DROP CONSTRAINT fk_domain_id_ref_domains`
+	result, err := tx.ExecContext(ctx, sqlStm)
+	if err != nil {
+		logs.Log().Errorf("cannot drop table %s ", err.Error())
+		_ = tx.Rollback()
+		return
+	}
+
+	_, err = result.RowsAffected()
+	if err != nil {
+		logs.Log().Errorf("cannot rowsAffected %s", err.Error())
+		_ = tx.Rollback()
+		return
+	}
+
+	sqlStm = `DROP TABLE IF EXISTS servers, domains`
+	result, err = tx.ExecContext(ctx, sqlStm)
+	if err != nil {
+		logs.Log().Errorf("cannot drop table %s ", err.Error())
+		_ = tx.Rollback()
+		return
+	}
+
+	_, err = result.RowsAffected()
+	if err != nil {
+		logs.Log().Errorf("cannot rowsAffected %s", err.Error())
+		_ = tx.Rollback()
+		return
+	}
+
+	_ = tx.Commit()
+
+	func TestDtime(t *testing.T) {
+	InitCockroach()
+}
+
+}
+*/
+
+func InitCockroach() {
+	_ = logs.InitLogger()
+	// CockroachClient creates a connection with the CockroachDB
+	CockroachClient = *cockroachdb.NewSQLClient()
+
+	tx, err := CockroachClient.Begin()
+	if err != nil {
+		logs.Log().Errorf("cannot create transaction")
 		_ = tx.Rollback()
 		return
 	}
@@ -198,6 +253,14 @@ func TestUpdateServer(t *testing.T) {
 	c.WithinDuration(*server.CreationDate, *server1.CreationDate, time.Second)
 
 	c.NotEmpty(server1.Domain.DomainID)
+
+	err = DeleteServer(server1.ServerID)
+	c.NoError(err)
+
+	server1, err = UpdateServer(server1.ServerID, "B+")
+	c.Error(err)
+	c.Empty(server1)
+	c.EqualError(ErrScanRow, err.Error())
 }
 
 func TestUpdateServerFailure(t *testing.T) {
