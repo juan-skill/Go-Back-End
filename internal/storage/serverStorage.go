@@ -28,13 +28,17 @@ const (
 	`
 
 	getServer = `
-	SELECT * FROM servers
-	WHERE id = $1 LIMIT 1
+	SELECT servers.id, servers.address, servers.sslgrade, servers.country, servers.owner, servers.creationdate, servers.updatedate, domains.id, domains.serverchanged, domains.sslgrade, domains.previousslgrade, domains.logo, domains.title, domains.isdown, domains.creationdate, domains.updatedate 
+	FROM servers 
+	INNER JOIN domains ON domains.id = servers.domain_id
+	WHERE servers.id = $1 LIMIT 1
 	`
 
 	listServers = `
-	SELECT * FROM servers
-	ORDER BY id
+	SELECT servers.id, servers.address, servers.sslgrade, servers.country, servers.owner, servers.creationdate, servers.updatedate, domains.id, domains.serverchanged, domains.sslgrade, domains.previousslgrade, domains.logo, domains.title, domains.isdown, domains.creationdate, domains.updatedate 
+	FROM servers 
+	INNER JOIN domains ON domains.id = servers.domain_id
+	ORDER BY servers.id
 	LIMIT $1
 	OFFSET $2
 	`
@@ -119,7 +123,7 @@ func (q *Queries) StoreServer(server *models.Server) (*models.Server, error) {
 // GetServer function will get a server struct by ServerID
 func (q *Queries) GetServer(serverID string) (*models.Server, error) {
 	if serverID == "" {
-		logs.Log().Errorf("cannot store server in database %s ", ErrEmptyServerID.Error())
+		logs.Log().Errorf("cannot be empty server_id %s ", ErrEmptyServerID.Error())
 		return nil, ErrEmptyServerID
 	}
 
@@ -141,17 +145,20 @@ func (q *Queries) GetServer(serverID string) (*models.Server, error) {
 		&item.SSLGrade,
 		&item.Country,
 		&item.Owner,
-		&item.Domain.DomainID,
 		&item.CreationDate,
-		&item.UpdateDate)
+		&item.UpdateDate,
+		&item.Domain.DomainID,
+		&item.Domain.ServerChanged,
+		&item.Domain.SSLGrade,
+		&item.Domain.PreviousSSLGrade,
+		&item.Domain.Logo,
+		&item.Domain.Title,
+		&item.Domain.IsDown,
+		&item.Domain.CreationDate,
+		&item.Domain.UpdateDate)
 	if err != nil {
 		logs.Log().Errorf("Scan error %s", err.Error())
 		return nil, ErrScanRow
-	}
-
-	item.Domain, err = GetDomain(item.Domain.DomainID)
-	if err != nil {
-		return nil, err
 	}
 
 	return item, nil
@@ -176,19 +183,22 @@ func (q *Queries) GetServers() ([]models.Server, error) {
 		item.Domain = new(models.Domain)
 		if err = rows.Scan(
 			&item.ServerID,
-			&item.Owner,
 			&item.Address,
 			&item.SSLGrade,
 			&item.Country,
-			&item.Domain.DomainID,
+			&item.Owner,
 			&item.CreationDate,
 			&item.UpdateDate,
+			&item.Domain.DomainID,
+			&item.Domain.ServerChanged,
+			&item.Domain.SSLGrade,
+			&item.Domain.PreviousSSLGrade,
+			&item.Domain.Logo,
+			&item.Domain.Title,
+			&item.Domain.IsDown,
+			&item.Domain.CreationDate,
+			&item.Domain.UpdateDate,
 		); err != nil {
-			return nil, err
-		}
-
-		item.Domain, err = GetDomain(item.Domain.DomainID)
-		if err != nil {
 			return nil, err
 		}
 

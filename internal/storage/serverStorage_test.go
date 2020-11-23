@@ -198,6 +198,14 @@ func TestUpdateServer(t *testing.T) {
 	c.WithinDuration(*server.CreationDate, *server1.CreationDate, time.Second)
 
 	c.NotEmpty(server1.Domain.DomainID)
+
+	err = DeleteServer(server1.ServerID)
+	c.NoError(err)
+
+	server1, err = UpdateServer(server1.ServerID, "B+")
+	c.Error(err)
+	c.Empty(server1)
+	c.EqualError(ErrScanRow, err.Error())
 }
 
 func TestUpdateServerFailure(t *testing.T) {
