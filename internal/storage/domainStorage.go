@@ -30,14 +30,15 @@ const (
 	LIMIT $1
 	OFFSET $2
 	`
-
 	getDomain = `
 	SELECT * FROM domains
-	WHERE id = $1 LIMIT 1
+	WHERE id = $1
+	ORDER BY sslgrade DESC
+	LIMIT 1
 	`
 	updateDomain = `
 	UPDATE domains
-	SET sslgrade = $2
+	SET sslgrade = $2, updatedate = now()
 	WHERE id = $1
 	RETURNING *
 	`

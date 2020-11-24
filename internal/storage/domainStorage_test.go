@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/other_project/crockroach/models"
+	"github.com/other_project/crockroach/shared/testrandom"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +19,7 @@ func storeDomainTest(t *testing.T) *models.Domain {
 
 	// create a new Domain
 
-	domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+	domain, err := models.NewDomain(false, false, "A+", testrandom.RandomSSLRating("A+"), "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 	c.NotNil(domain)
 
@@ -200,12 +201,20 @@ func TestDeleteDomainFailure(t *testing.T) {
 	c.Error(err)
 	c.EqualError(ErrEmptyDomainID, err.Error())
 
-	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
-
 	err = DeleteDomain(ctx, "cae0ae1d-45bd-4dda-b939-cfb34569052b")
 	c.Error(err)
 	c.EqualError(ErrZeroRowsAffected, err.Error())
+
+	domains, err := GetDomains(ctx)
+	c.NoError(err)
+
+	for _, domain := range domains {
+		err = DeleteDomain(ctx, domain.DomainID)
+		c.Nil(err)
+	}
+
+	_, err = GetDomains(ctx)
+	c.NoError(err)
 }
 
 func TestGetDomains(t *testing.T) {
@@ -223,18 +232,10 @@ func TestGetDomains(t *testing.T) {
 	c.NoError(err)
 
 	for _, domain := range domains {
-		//c.NotEmpty(domain)
 		err = DeleteDomain(ctx, domain.DomainID)
 		c.Nil(err)
+		c.NotEmpty(domain)
 	}
-
-	domains, err = GetDomains(ctx)
-	c.NoError(err)
-
-	c.NotEmpty(domains[0])
-
-	_, err = GetDomain(ctx, domains[0].DomainID)
-	c.NoError(err)
 }
 
 func BenchmarkStoreDomain(b *testing.B) {

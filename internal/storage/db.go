@@ -18,7 +18,7 @@ type DBTX interface {
 	GetServer(ctx context.Context, serverID string) (*models.Server, error)
 	UpdateServer(ctx context.Context, serverID, sslgrade string) (*models.Server, error)
 	DeleteServer(ctx context.Context, serverID string) error
-	GetServers(ctx context.Context) ([]models.Server, error)
+	GetServers(ctx context.Context, domainID string) ([]*models.Server, error)
 	StoreDomain(ctx context.Context, domain *models.Domain) (*models.Domain, error)
 	GetDomain(ctx context.Context, domainID string) (*models.Domain, error)
 	UpdateDomain(ctx context.Context, serverID, sslgrade string) (*models.Domain, error)
@@ -33,13 +33,9 @@ type DBTX interface {
 }
 
 // NewQueries function create a new instance of
-/*
-func NewQueries(db DBTX) *Queries {
-	return &Queries{
-		db: db,
-	}
+func NewQueries() *Queries {
+	return &Queries{}
 }
-*/
 
 // Queries structure allow us extend the functionality
 type Queries struct {
@@ -77,8 +73,8 @@ func DeleteServer(ctx context.Context, serverID string) error {
 }
 
 // GetServers function will list all the servers structures
-func GetServers(ctx context.Context) ([]models.Server, error) {
-	return Default.GetServers(ctx)
+func GetServers(ctx context.Context, domainID string) ([]*models.Server, error) {
+	return Default.GetServers(ctx, domainID)
 }
 
 // StoreDomain function will store a domain in the database.

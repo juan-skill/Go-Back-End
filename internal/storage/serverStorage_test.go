@@ -9,6 +9,8 @@ import (
 	"github.com/other_project/crockroach/internal/logs"
 	"github.com/other_project/crockroach/models"
 	"github.com/other_project/crockroach/shared/cockroachdb"
+	"github.com/other_project/crockroach/shared/testrandom"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -100,7 +102,7 @@ func storeServerTest(t *testing.T) *models.Server {
 
 	InitCockroach()
 
-	domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+	domain, err := models.NewDomain(false, false, "A+", testrandom.RandomSSLRating("B"), "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 	c.NotEmpty(domain)
 
@@ -111,25 +113,30 @@ func storeServerTest(t *testing.T) *models.Server {
 	c.NoError(err)
 	c.NotEmpty(domain)
 
-	// create a new Server
-	server, err := models.NewServer("server1", "B", "US", "Amazon.com, Inc.", domain)
-	c.NoError(err)
-	c.NotNil(server)
+	serverNumber := testrandom.RandomServerNumber()
+	var i int64
 
-	server1, err := StoreServer(ctx, server)
-	c.NoError(err)
-	c.NotEmpty(server1)
+	for i = 0; i < serverNumber; i++ {
+		// create a new Server
+		server, err := models.NewServer("server1", testrandom.RandomSSLRating(""), "US", "Amazon.com, Inc.", domain)
+		c.NoError(err)
+		c.NotNil(server)
 
-	c.Equal(server.ServerID, server1.ServerID)
-	c.Equal(server.Address, server1.Address)
-	c.Equal(server.SSLGrade, server1.SSLGrade)
-	c.Equal(server.Country, server1.Country)
+		server1, err := StoreServer(ctx, server)
+		c.NoError(err)
+		c.NotEmpty(server1)
 
-	domain.Servers = append(domain.Servers, server1)
+		c.Equal(server.ServerID, server1.ServerID)
+		c.Equal(server.Address, server1.Address)
+		c.Equal(server.SSLGrade, server1.SSLGrade)
+		c.Equal(server.Country, server1.Country)
 
+		domain.Servers = append(domain.Servers, server1)
+	}
 	c.Equal(domain.DomainID, domain.Servers[0].Domain.DomainID)
+	c.Equal(serverNumber, int64(len(domain.Servers)))
 
-	return server1
+	return domain.Servers[0]
 }
 
 func TestStoreServer(t *testing.T) {
@@ -243,6 +250,10 @@ func TestUpdateServerFailure(t *testing.T) {
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrEmptyServerID, err.Error())
+
+	_, err = UpdateServer(ctx, "cae0ae1d-4dda-b938-cfb34569052b", testrandom.RandomSSLRating(""))
+	c.Error(err)
+	c.EqualError(ErrInvalidQuery, err.Error())
 }
 
 func TestDeleteServer(t *testing.T) {
@@ -289,15 +300,15 @@ func TestGetServers(t *testing.T) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	servers, err := GetServers(ctx)
+	servers, err := GetServers(ctx, "")
 	c.NoError(err)
 
 	for _, server := range servers {
 		c.NotEmpty(server)
 	}
 
-	servers = nil
-	c.Nil(servers)
+	_, err = GetServers(ctx, "0ae1d-45bd-4dda-b939-cfb34569952b")
+	c.Error(err)
 }
 
 func BenchmarkStoreServer(b *testing.B) {

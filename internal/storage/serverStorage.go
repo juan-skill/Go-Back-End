@@ -41,9 +41,18 @@ const (
 	LIMIT $1
 	OFFSET $2
 	`
+
+	listServersByDomain = `
+	SELECT servers.id, servers.address, servers.sslgrade, servers.country, servers.owner, servers.creationdate, servers.updatedate, domains.id, domains.serverchanged, domains.sslgrade, domains.previousslgrade, domains.logo, domains.title, domains.isdown, domains.creationdate, domains.updatedate 
+	FROM servers 
+	INNER JOIN domains ON domains.id = servers.domain_id
+	WHERE servers.domain_id = $1
+	ORDER BY servers.sslgrade DESC
+	`
+
 	updateServer = `
 	UPDATE servers
-	SET sslgrade = $2
+	SET sslgrade = $2, updatedate = now()
 	WHERE id = $1
 	RETURNING *
 	`
@@ -74,9 +83,9 @@ var (
 	// ErrEmptyList there are not element
 	ErrEmptyList = errors.New("there are not elements")
 	// Limit fdfddfgdf
-	Limit = env.GetInt64("LIMIT_QUERY", 5)
-	// Offset fdf
-	Offset = env.GetInt64("OFFSET_QUERY", 5)
+	Limit = env.GetInt64("LIMIT_QUERY", 10)
+	// Offset fdfw
+	Offset = env.GetInt64("OFFSET_QUERY", 0)
 )
 
 // StoreServer function will store a server struct
@@ -158,14 +167,22 @@ func (q *Queries) GetServer(ctx context.Context, serverID string) (*models.Serve
 }
 
 // GetServers function will get a list of servers
-func (q *Queries) GetServers(ctx context.Context) ([]models.Server, error) {
-	rows, err := CockroachClient.QueryContext(ctx, listServers, Limit, Offset)
+func (q *Queries) GetServers(ctx context.Context, domainID string) ([]*models.Server, error) {
+	var rows *sql.Rows
+	var err error
+
+	if domainID != "" {
+		rows, err = CockroachClient.QueryContext(ctx, listServersByDomain, domainID)
+	} else {
+		rows, err = CockroachClient.QueryContext(ctx, listServers, Limit, Offset)
+	}
+
 	if err != nil {
 		logs.Log().Errorf("Query error %s", err.Error())
 		return nil, ErrInvalidQuery
 	}
 
-	items := []models.Server{}
+	items := []*models.Server{}
 
 	for rows.Next() {
 		item := new(models.Server)
@@ -192,7 +209,7 @@ func (q *Queries) GetServers(ctx context.Context) ([]models.Server, error) {
 			return nil, err
 		}
 
-		items = append(items, *item)
+		items = append(items, item)
 	}
 
 	if err := rows.Close(); err != nil {
