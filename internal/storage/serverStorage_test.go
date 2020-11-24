@@ -104,7 +104,10 @@ func storeServerTest(t *testing.T) *models.Server {
 	c.NoError(err)
 	c.NotEmpty(domain)
 
-	domain, err = StoreDomain(domain)
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain, err = StoreDomain(ctx, domain)
 	c.NoError(err)
 	c.NotEmpty(domain)
 
@@ -113,7 +116,7 @@ func storeServerTest(t *testing.T) *models.Server {
 	c.NoError(err)
 	c.NotNil(server)
 
-	server1, err := StoreServer(server)
+	server1, err := StoreServer(ctx, server)
 	c.NoError(err)
 	c.NotEmpty(server1)
 
@@ -136,12 +139,15 @@ func TestStoreServer(t *testing.T) {
 func TestStoreServerFailure(t *testing.T) {
 	c := require.New(t)
 
-	server, err := StoreServer(nil)
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	server, err := StoreServer(ctx, nil)
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrInvalidServer, err.Error())
 
-	server, err = StoreServer(server)
+	server, err = StoreServer(ctx, server)
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrInvalidServer, err.Error())
@@ -153,7 +159,10 @@ func TestGetServer(t *testing.T) {
 	// create a new Server
 	server := storeServerTest(t)
 
-	server1, err := GetServer(server.ServerID)
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	server1, err := GetServer(ctx, server.ServerID)
 	c.NoError(err)
 	c.NotEmpty(server1)
 
@@ -168,13 +177,16 @@ func TestGetServer(t *testing.T) {
 func TestGetServerFailure(t *testing.T) {
 	c := require.New(t)
 
-	server, err := GetServer("")
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	server, err := GetServer(ctx, "")
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrEmptyServerID, err.Error())
 
 	//
-	server, err = GetServer("cae0ae1d-45bd-4dda-b938-cfb34569052b")
+	server, err = GetServer(ctx, "cae0ae1d-45bd-4dda-b938-cfb34569052b")
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrScanRow, err.Error())
@@ -186,7 +198,10 @@ func TestUpdateServer(t *testing.T) {
 	// create a new Server
 	server := storeServerTest(t)
 
-	server1, err := UpdateServer(server.ServerID, "A")
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	server1, err := UpdateServer(ctx, server.ServerID, "A")
 	c.NoError(err)
 	c.NotEmpty(server1)
 
@@ -199,10 +214,10 @@ func TestUpdateServer(t *testing.T) {
 
 	c.NotEmpty(server1.Domain.DomainID)
 
-	err = DeleteServer(server1.ServerID)
+	err = DeleteServer(ctx, server1.ServerID)
 	c.NoError(err)
 
-	server1, err = UpdateServer(server1.ServerID, "B+")
+	server1, err = UpdateServer(ctx, server1.ServerID, "B+")
 	c.Error(err)
 	c.Empty(server1)
 	c.EqualError(ErrScanRow, err.Error())
@@ -211,17 +226,20 @@ func TestUpdateServer(t *testing.T) {
 func TestUpdateServerFailure(t *testing.T) {
 	c := require.New(t)
 
-	server, err := UpdateServer("", "")
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	server, err := UpdateServer(ctx, "", "")
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrEmptyServerID, err.Error())
 
-	server, err = UpdateServer("cae0ae1d-45bd-4dda-b938-cfb34569052b", "")
+	server, err = UpdateServer(ctx, "cae0ae1d-45bd-4dda-b938-cfb34569052b", "")
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrEmptySSLGrade, err.Error())
 
-	server, err = UpdateServer("", "A")
+	server, err = UpdateServer(ctx, "", "A")
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrEmptyServerID, err.Error())
@@ -233,10 +251,13 @@ func TestDeleteServer(t *testing.T) {
 	// create a new Server
 	server := storeServerTest(t)
 
-	err := DeleteServer(server.ServerID)
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	err := DeleteServer(ctx, server.ServerID)
 	c.NoError(err)
 
-	server1, err := GetServer(server.ServerID)
+	server1, err := GetServer(ctx, server.ServerID)
 	c.Error(err)
 	c.Empty(server1)
 	c.EqualError(err, ErrScanRow.Error())
@@ -245,11 +266,14 @@ func TestDeleteServer(t *testing.T) {
 func TestDeleteServerFailure(t *testing.T) {
 	c := require.New(t)
 
-	err := DeleteServer("")
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	err := DeleteServer(ctx, "")
 	c.Error(err)
 	c.EqualError(ErrEmptyServerID, err.Error())
 
-	err = DeleteServer("cae0ae1d-45bd-4dda-b939-cfb34569052b")
+	err = DeleteServer(ctx, "cae0ae1d-45bd-4dda-b939-cfb34569052b")
 	c.Error(err)
 	c.EqualError(ErrZeroRowsAffected, err.Error())
 }
@@ -262,7 +286,10 @@ func TestGetServers(t *testing.T) {
 		storeServerTest(t)
 	}
 
-	servers, err := GetServers()
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	servers, err := GetServers(ctx)
 	c.NoError(err)
 
 	for _, server := range servers {
@@ -276,15 +303,16 @@ func TestGetServers(t *testing.T) {
 func BenchmarkStoreServer(b *testing.B) {
 	InitCockroach()
 
-	for i := 0; i < b.N; i++ {
-		InitCockroach()
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
 
+	for i := 0; i < b.N; i++ {
 		domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
 		if err != nil {
 			b.Fatal(err)
 		}
 
-		domain, err = StoreDomain(domain)
+		domain, err = StoreDomain(ctx, domain)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -294,7 +322,7 @@ func BenchmarkStoreServer(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		_, err = StoreServer(server)
+		_, err = StoreServer(ctx, server)
 		if err != nil {
 			b.Fatal(err)
 		}

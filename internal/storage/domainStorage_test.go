@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -21,7 +22,10 @@ func storeDomainTest(t *testing.T) *models.Domain {
 	c.NoError(err)
 	c.NotNil(domain)
 
-	domain1, err := StoreDomain(domain)
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain1, err := StoreDomain(ctx, domain)
 	c.NoError(err)
 	c.NotEmpty(domain1)
 
@@ -44,12 +48,15 @@ func TestStoreDomain(t *testing.T) {
 func TestStoreDomainFailure(t *testing.T) {
 	c := require.New(t)
 
-	domain, err := StoreDomain(nil)
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain, err := StoreDomain(ctx, nil)
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrInvalidDomain, err.Error())
 
-	domain, err = StoreDomain(domain)
+	domain, err = StoreDomain(ctx, domain)
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrInvalidDomain, err.Error())
@@ -61,7 +68,10 @@ func TestGetDomain(t *testing.T) {
 	// create a new Server
 	domain := storeDomainTest(t)
 
-	domain1, err := GetDomain(domain.DomainID)
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain1, err := GetDomain(ctx, domain.DomainID)
 	c.NoError(err)
 	c.NotEmpty(domain1)
 
@@ -82,13 +92,18 @@ func TestGetDomainFailure(t *testing.T) {
 
 	InitCockroach()
 
-	domain, err := GetDomain("")
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain, err := GetDomain(ctx, "")
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrEmptyDomainID, err.Error())
 
-	//
-	domain, err = GetDomain("cae0ae1d-45bd-4dda-b938-cfb34569052b")
+	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain, err = GetDomain(ctx, "cae0ae1d-45bd-4dda-b938-cfb34569052b")
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrScanRow, err.Error())
@@ -100,7 +115,10 @@ func TestUpdateDomain(t *testing.T) {
 	// create a new Server
 	domain := storeDomainTest(t)
 
-	domain1, err := UpdateDomain(domain.DomainID, "A")
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain1, err := UpdateDomain(ctx, domain.DomainID, "A")
 	c.NoError(err)
 	c.NotEmpty(domain1)
 
@@ -122,22 +140,28 @@ func TestUpdateDomainFailure(t *testing.T) {
 
 	InitCockroach()
 
-	domain, err := UpdateDomain("", "")
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain, err := UpdateDomain(ctx, "", "")
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrEmptyDomainID, err.Error())
 
-	domain, err = UpdateDomain("cae0ae1d-45bd-4dda-b938-cfb34569052b", "")
+	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain, err = UpdateDomain(ctx, "cae0ae1d-45bd-4dda-b938-cfb34569052b", "")
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrEmptySSLGrade, err.Error())
 
-	domain, err = UpdateDomain("", "A")
+	domain, err = UpdateDomain(ctx, "", "A")
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrEmptyDomainID, err.Error())
 
-	domain, err = UpdateDomain("cae0ae1d-45bd-4dda-b938-cfb34569052b", "B")
+	domain, err = UpdateDomain(ctx, "cae0ae1d-45bd-4dda-b938-cfb34569052b", "B")
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrScanRow, err.Error())
@@ -149,10 +173,16 @@ func TestDeleteDomain(t *testing.T) {
 	// create a new domain
 	domain := storeDomainTest(t)
 
-	err := DeleteDomain(domain.DomainID)
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	err := DeleteDomain(ctx, domain.DomainID)
 	c.NoError(err)
 
-	server1, err := GetDomain(domain.DomainID)
+	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	server1, err := GetDomain(ctx, domain.DomainID)
 	c.Error(err)
 	c.Empty(server1)
 	c.EqualError(err, ErrScanRow.Error())
@@ -163,11 +193,17 @@ func TestDeleteDomainFailure(t *testing.T) {
 
 	InitCockroach()
 
-	err := DeleteDomain("")
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	err := DeleteDomain(ctx, "")
 	c.Error(err)
 	c.EqualError(ErrEmptyDomainID, err.Error())
 
-	err = DeleteDomain("cae0ae1d-45bd-4dda-b939-cfb34569052b")
+	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	err = DeleteDomain(ctx, "cae0ae1d-45bd-4dda-b939-cfb34569052b")
 	c.Error(err)
 	c.EqualError(ErrZeroRowsAffected, err.Error())
 }
@@ -180,16 +216,32 @@ func TestGetDomains(t *testing.T) {
 		storeDomainTest(t)
 	}
 
-	domains, err := GetDomains()
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domains, err := GetDomains(ctx)
 	c.NoError(err)
 
 	for _, domain := range domains {
-		c.NotEmpty(domain)
+		//c.NotEmpty(domain)
+		err = DeleteDomain(ctx, domain.DomainID)
+		c.Nil(err)
 	}
+
+	domains, err = GetDomains(ctx)
+	c.NoError(err)
+
+	c.NotEmpty(domains[0])
+
+	_, err = GetDomain(ctx, domains[0].DomainID)
+	c.NoError(err)
 }
 
 func BenchmarkStoreDomain(b *testing.B) {
 	InitCockroach()
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
 
 	for i := 0; i < b.N; i++ {
 		// create a new Domain
@@ -198,7 +250,7 @@ func BenchmarkStoreDomain(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		_, err = StoreDomain(domain)
+		_, err = StoreDomain(ctx, domain)
 		if err != nil {
 			b.Fatal(err)
 		}
