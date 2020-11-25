@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/other_project/crockroach/internal/logs"
 	"github.com/other_project/crockroach/models"
@@ -31,14 +30,15 @@ const (
 	LIMIT $1
 	OFFSET $2
 	`
-
 	getDomain = `
 	SELECT * FROM domains
-	WHERE id = $1 LIMIT 1
+	WHERE id = $1
+	ORDER BY sslgrade DESC
+	LIMIT 1
 	`
 	updateDomain = `
 	UPDATE domains
-	SET sslgrade = $2
+	SET sslgrade = $2, updatedate = now()
 	WHERE id = $1
 	RETURNING *
 	`
@@ -58,14 +58,11 @@ var (
 )
 
 // StoreDomain function will store a domain struct
-func (q *Queries) StoreDomain(domain *models.Domain) (*models.Domain, error) {
+func (q *Queries) StoreDomain(ctx context.Context, domain *models.Domain) (*models.Domain, error) {
 	if domain == nil {
 		logs.Log().Errorf("cannot store domain in database %s ", ErrInvalidDomain.Error())
 		return nil, ErrInvalidDomain
 	}
-
-	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
 
 	row := CockroachClient.QueryRowContext(ctx, createDomain, domain.DomainID, domain.ServerChanged, domain.SSLGrade, domain.PreviousSSLGrade, domain.Logo, domain.Title, domain.IsDown, domain.CreationDate, domain.UpdateDate)
 	if row.Err() != nil {
@@ -95,14 +92,11 @@ func (q *Queries) StoreDomain(domain *models.Domain) (*models.Domain, error) {
 }
 
 // GetDomain function will get a domain struct by domainID
-func (q *Queries) GetDomain(domainID string) (*models.Domain, error) {
+func (q *Queries) GetDomain(ctx context.Context, domainID string) (*models.Domain, error) {
 	if domainID == "" {
 		logs.Log().Errorf("cannot store domain in database %s ", ErrEmptyDomainID.Error())
 		return nil, ErrEmptyDomainID
 	}
-
-	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
 
 	row := CockroachClient.QueryRowContext(ctx, getDomain, domainID)
 	if row.Err() != nil {
@@ -132,10 +126,7 @@ func (q *Queries) GetDomain(domainID string) (*models.Domain, error) {
 }
 
 // GetDomains function will get a list of domains
-func (q *Queries) GetDomains() ([]models.Domain, error) {
-	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
-
+func (q *Queries) GetDomains(ctx context.Context) ([]models.Domain, error) {
 	rows, err := CockroachClient.QueryContext(ctx, listDomains, Limit, Offset)
 	if err != nil {
 		logs.Log().Errorf("Query error %s", err.Error())
@@ -178,7 +169,7 @@ func (q *Queries) GetDomains() ([]models.Domain, error) {
 }
 
 // UpdateDomain function will update a domain struct
-func (q *Queries) UpdateDomain(domainID, sslgrade string) (*models.Domain, error) {
+func (q *Queries) UpdateDomain(ctx context.Context, domainID, sslgrade string) (*models.Domain, error) {
 	if domainID == "" {
 		logs.Log().Errorf("cannot be empty domain_id attribute %s ", ErrEmptyDomainID.Error())
 		return nil, ErrEmptyDomainID
@@ -188,9 +179,6 @@ func (q *Queries) UpdateDomain(domainID, sslgrade string) (*models.Domain, error
 		logs.Log().Errorf("cannot be empty sslgrade attribute %s ", ErrEmptySSLGrade.Error())
 		return nil, ErrEmptySSLGrade
 	}
-
-	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
 
 	row := CockroachClient.QueryRowContext(ctx, updateDomain, domainID, sslgrade)
 	if row.Err() != nil {
@@ -220,14 +208,11 @@ func (q *Queries) UpdateDomain(domainID, sslgrade string) (*models.Domain, error
 }
 
 // DeleteDomain function will update a domain struct
-func (q *Queries) DeleteDomain(domainID string) error {
+func (q *Queries) DeleteDomain(ctx context.Context, domainID string) error {
 	if domainID == "" {
 		logs.Log().Errorf("cannot be empty domain_id attribute %s ", ErrEmptyDomainID.Error())
 		return ErrEmptyDomainID
 	}
-
-	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
 
 	row, err := CockroachClient.ExecContext(ctx, deleteDomain, domainID)
 	if err != nil {

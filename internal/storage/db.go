@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/other_project/crockroach/models"
@@ -13,16 +14,16 @@ var (
 
 // DBTX interface
 type DBTX interface {
-	StoreServer(server *models.Server) (*models.Server, error)
-	GetServer(serverID string) (*models.Server, error)
-	UpdateServer(serverID, sslgrade string) (*models.Server, error)
-	DeleteServer(serverID string) error
-	GetServers() ([]models.Server, error)
-	StoreDomain(domain *models.Domain) (*models.Domain, error)
-	GetDomain(domainID string) (*models.Domain, error)
-	UpdateDomain(serverID, sslgrade string) (*models.Domain, error)
-	DeleteDomain(domainID string) error
-	GetDomains() ([]models.Domain, error)
+	StoreServer(ctx context.Context, server *models.Server) (*models.Server, error)
+	GetServer(ctx context.Context, serverID string) (*models.Server, error)
+	UpdateServer(ctx context.Context, serverID, sslgrade string) (*models.Server, error)
+	DeleteServer(ctx context.Context, serverID string) error
+	GetServers(ctx context.Context, domainID string) ([]*models.Server, error)
+	StoreDomain(ctx context.Context, domain *models.Domain) (*models.Domain, error)
+	GetDomain(ctx context.Context, domainID string) (*models.Domain, error)
+	UpdateDomain(ctx context.Context, serverID, sslgrade string) (*models.Domain, error)
+	DeleteDomain(ctx context.Context, domainID string) error
+	GetDomains(ctx context.Context) ([]models.Domain, error)
 	/*
 		ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 		PrepareContext(context.Context, string) (*sql.Stmt, error)
@@ -32,13 +33,9 @@ type DBTX interface {
 }
 
 // NewQueries function create a new instance of
-/*
-func NewQueries(db DBTX) *Queries {
-	return &Queries{
-		db: db,
-	}
+func NewQueries() *Queries {
+	return &Queries{}
 }
-*/
 
 // Queries structure allow us extend the functionality
 type Queries struct {
@@ -56,53 +53,53 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 */
 
 // StoreServer function will store a server in the database.
-func StoreServer(server *models.Server) (*models.Server, error) {
-	return Default.StoreServer(server)
+func StoreServer(ctx context.Context, server *models.Server) (*models.Server, error) {
+	return Default.StoreServer(ctx, server)
 }
 
 // GetServer function will retrieve a server in the database.
-func GetServer(serverID string) (*models.Server, error) {
-	return Default.GetServer(serverID)
+func GetServer(ctx context.Context, serverID string) (*models.Server, error) {
+	return Default.GetServer(ctx, serverID)
 }
 
 // UpdateServer function will update a server struct
-func UpdateServer(serverID, sslgrade string) (*models.Server, error) {
-	return Default.UpdateServer(serverID, sslgrade)
+func UpdateServer(ctx context.Context, serverID, sslgrade string) (*models.Server, error) {
+	return Default.UpdateServer(ctx, serverID, sslgrade)
 }
 
 // DeleteServer function will delete a server struct
-func DeleteServer(serverID string) error {
-	return Default.DeleteServer(serverID)
+func DeleteServer(ctx context.Context, serverID string) error {
+	return Default.DeleteServer(ctx, serverID)
 }
 
 // GetServers function will list all the servers structures
-func GetServers() ([]models.Server, error) {
-	return Default.GetServers()
+func GetServers(ctx context.Context, domainID string) ([]*models.Server, error) {
+	return Default.GetServers(ctx, domainID)
 }
 
 // StoreDomain function will store a domain in the database.
-func StoreDomain(domain *models.Domain) (*models.Domain, error) {
-	return Default.StoreDomain(domain)
+func StoreDomain(ctx context.Context, domain *models.Domain) (*models.Domain, error) {
+	return Default.StoreDomain(ctx, domain)
 }
 
 // GetDomain function will retrieve a domain in the database.
-func GetDomain(domainID string) (*models.Domain, error) {
-	return Default.GetDomain(domainID)
+func GetDomain(ctx context.Context, domainID string) (*models.Domain, error) {
+	return Default.GetDomain(ctx, domainID)
 }
 
 // UpdateDomain function will update a domain struct
-func UpdateDomain(serverID, sslgrade string) (*models.Domain, error) {
-	return Default.UpdateDomain(serverID, sslgrade)
+func UpdateDomain(ctx context.Context, serverID, sslgrade string) (*models.Domain, error) {
+	return Default.UpdateDomain(ctx, serverID, sslgrade)
 }
 
 // DeleteDomain function will delete a domain struct
-func DeleteDomain(domainID string) error {
-	return Default.DeleteDomain(domainID)
+func DeleteDomain(ctx context.Context, domainID string) error {
+	return Default.DeleteDomain(ctx, domainID)
 }
 
 // GetDomains function will list all the domains structures
-func GetDomains() ([]models.Domain, error) {
-	return Default.GetDomains()
+func GetDomains(ctx context.Context) ([]models.Domain, error) {
+	return Default.GetDomains(ctx)
 }
 
 func init() {
