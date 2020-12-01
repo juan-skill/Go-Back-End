@@ -1,10 +1,11 @@
 package storage
 
+/*
 import (
 	_ "github.com/lib/pq"
 )
 
-/*
+
 const (
 	dbDriver = "postgres"
 	dbSource = "postgresql://test@localhost:26257/testdb?sslmode=disable"

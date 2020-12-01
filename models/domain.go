@@ -8,6 +8,8 @@ import (
 )
 
 var (
+	// ErrEmptyDomainName for empty servers
+	ErrEmptyDomainName = errors.New("Domain name cannot be empty")
 	// ErrEmptyServers for empty servers
 	ErrEmptyServers = errors.New("servers cannot be empty")
 	// ErrEmptyPSSLGrade for empty psslgrade
@@ -21,6 +23,7 @@ var (
 // Domain model structure for domain
 type Domain struct {
 	DomainID         string     `json:"domain_id"`
+	DomainName       string     `json:"domain_name"`
 	Servers          []*Server  `json:"servers"`
 	ServerChanged    bool       `json:"servers_changed"`
 	SSLGrade         string     `json:"ssl_grade"`
@@ -33,13 +36,9 @@ type Domain struct {
 }
 
 // NewDomain Initialize a new domain
-func NewDomain(serverChanged, isdown bool, sslGrade, pSSLGrade, logo, title string) (domain *Domain, err error) {
-	if sslGrade == "" {
-		return nil, ErrEmptySSLGrade
-	}
-
-	if pSSLGrade == "" {
-		return nil, ErrEmptyPSSLGrade
+func NewDomain(serverChanged, isdown bool, domainName, sslGrade, pSSLGrade, logo, title string) (domain *Domain, err error) {
+	if domainName == "" {
+		return nil, ErrEmptyDomainName
 	}
 
 	if logo == "" {
@@ -60,6 +59,7 @@ func NewDomain(serverChanged, isdown bool, sslGrade, pSSLGrade, logo, title stri
 
 	domain = &Domain{
 		DomainID:         domainID.String(),
+		DomainName:       domainName,
 		ServerChanged:    serverChanged,
 		SSLGrade:         sslGrade,
 		PreviousSSLGrade: pSSLGrade,

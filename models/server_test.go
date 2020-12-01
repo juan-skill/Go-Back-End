@@ -9,7 +9,7 @@ import (
 func TestNewServerinSuccess(t *testing.T) {
 	c := require.New(t)
 
-	domain, err := NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+	domain, err := NewDomain(false, false, "google.com", "A+", "B", "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 	c.NotEmpty(domain)
 
@@ -24,7 +24,7 @@ func TestNewServerinSuccess(t *testing.T) {
 func TestNewServerWithWrongParams(t *testing.T) {
 	c := require.New(t)
 
-	domain, err := NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+	domain, err := NewDomain(false, false, "google.com", "A+", "B", "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 	c.NotEmpty(domain)
 
@@ -43,7 +43,7 @@ func TestNewServerWithWrongParams(t *testing.T) {
 
 func BenchmarkNewServer(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		domain, err := NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+		domain, err := NewDomain(false, false, "google.com", "A+", "B", "https://server.com/icon.png", "Title of the page")
 		if err != nil {
 			b.Fatal(err)
 		}

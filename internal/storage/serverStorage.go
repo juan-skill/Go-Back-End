@@ -83,7 +83,7 @@ var (
 	// ErrEmptyList there are not element
 	ErrEmptyList = errors.New("there are not elements")
 	// Limit fdfddfgdf
-	Limit = env.GetInt64("LIMIT_QUERY", 10)
+	Limit = env.GetInt64("LIMIT_QUERY", 100)
 	// Offset fdfw
 	Offset = env.GetInt64("OFFSET_QUERY", 0)
 )

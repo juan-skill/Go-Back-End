@@ -102,7 +102,7 @@ func storeServerTest(t *testing.T) *models.Server {
 
 	InitCockroach()
 
-	domain, err := models.NewDomain(false, false, "A+", testrandom.RandomSSLRating("B"), "https://server.com/icon.png", "Title of the page")
+	domain, err := models.NewDomain(false, false, "google.com", "A+", testrandom.RandomSSLRating("B"), "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 	c.NotEmpty(domain)
 
@@ -318,7 +318,7 @@ func BenchmarkStoreServer(b *testing.B) {
 	defer cancelfunc()
 
 	for i := 0; i < b.N; i++ {
-		domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+		domain, err := models.NewDomain(false, false, "google.com", "A+", "B", "https://server.com/icon.png", "Title of the page")
 		if err != nil {
 			b.Fatal(err)
 		}

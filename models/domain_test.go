@@ -25,9 +25,10 @@ func TestNewDomainSuccess(t *testing.T) {
 
 	//servers := createListServer()
 
-	domain, err := NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+	domain, err := NewDomain(false, false, "google.com", "A+", "B", "https://server.com/icon.png", "Title of the page")
 
 	c.NoError(err)
+	c.NotEmpty(domain.DomainName)
 	c.NotEmpty(domain.DomainID)
 	c.NotNil(domain.CreationDate)
 	c.NotNil(domain.UpdateDate)
@@ -38,22 +39,25 @@ func TestNewDomainWithWrongParams(t *testing.T) {
 
 	//servers := createListServer()
 
-	_, err := NewDomain(false, false, "", "B", "https://server.com/icon.png", "Title of the page")
-	c.EqualError(ErrEmptySSLGrade, err.Error())
+	_, err := NewDomain(false, false, "google.com", "", "B", "https://server.com/icon.png", "Title of the page")
+	c.NoError(err)
 
-	_, err = NewDomain(false, false, "A+", "", "https://server.com/icon.png", "Title of the page")
-	c.EqualError(ErrEmptyPSSLGrade, err.Error())
+	_, err = NewDomain(false, false, "google.com", "A+", "", "https://server.com/icon.png", "Title of the page")
+	c.NoError(err)
 
-	_, err = NewDomain(false, false, "A+", "B", "", "Title of the page")
+	_, err = NewDomain(false, false, "google.com", "A+", "B", "", "Title of the page")
 	c.EqualError(ErrEmptyLogo, err.Error())
 
-	_, err = NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "")
+	_, err = NewDomain(false, false, "google.com", "A+", "B", "https://server.com/icon.png", "")
 	c.EqualError(ErrEmptyTitle, err.Error())
+
+	_, err = NewDomain(false, false, "", "A+", "B", "https://server.com/icon.png", "Title of the page")
+	c.EqualError(ErrEmptyDomainName, err.Error())
 }
 
 func BenchmarkNewDomain(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		_, err := NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+		_, err := NewDomain(false, false, "google.com", "A+", "B", "https://server.com/icon.png", "Title of the page")
 		if err != nil {
 			b.Fatal(err)
 		}
