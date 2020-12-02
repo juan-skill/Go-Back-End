@@ -21,9 +21,13 @@ type DBTX interface {
 	GetServers(ctx context.Context, domainID string) ([]*models.Server, error)
 	StoreDomain(ctx context.Context, domain *models.Domain) (*models.Domain, error)
 	GetDomain(ctx context.Context, domainID string) (*models.Domain, error)
-	UpdateDomain(ctx context.Context, serverID, sslgrade string) (*models.Domain, error)
+	UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain) (*models.Domain, error)
 	DeleteDomain(ctx context.Context, domainID string) error
-	GetDomains(ctx context.Context) ([]models.Domain, error)
+	GetDomains(ctx context.Context, time string) ([]models.Domain, error)
+	GetRecordByName(domain *models.Domain) (objects []*models.Domain, err error)
+	NewRecord(domain *models.Domain) (*models.LogDomainStatus, error)
+	ReloadRecord(ctx context.Context) (myObjects map[string]*models.LogDomainStatus, err error)
+
 	/*
 		ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 		PrepareContext(context.Context, string) (*sql.Stmt, error)
@@ -88,8 +92,8 @@ func GetDomain(ctx context.Context, domainID string) (*models.Domain, error) {
 }
 
 // UpdateDomain function will update a domain struct
-func UpdateDomain(ctx context.Context, serverID, sslgrade string) (*models.Domain, error) {
-	return Default.UpdateDomain(ctx, serverID, sslgrade)
+func UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain) (*models.Domain, error) {
+	return Default.UpdateDomain(ctx, sslgrade, previouSSL, domain)
 }
 
 // DeleteDomain function will delete a domain struct
@@ -98,8 +102,23 @@ func DeleteDomain(ctx context.Context, domainID string) error {
 }
 
 // GetDomains function will list all the domains structures
-func GetDomains(ctx context.Context) ([]models.Domain, error) {
-	return Default.GetDomains(ctx)
+func GetDomains(ctx context.Context, time string) ([]models.Domain, error) {
+	return Default.GetDomains(ctx, time)
+}
+
+// GetRecordByName function will list all the domains by name
+func GetRecordByName(domain *models.Domain) (objects []*models.Domain, err error) {
+	return Default.GetRecordByName(domain)
+}
+
+// NewRecord function save a domain in the memory
+func NewRecord(domain *models.Domain) (*models.LogDomainStatus, error) {
+	return Default.NewRecord(domain)
+}
+
+// ReloadRecord function will reload all records the newest log records
+func ReloadRecord(ctx context.Context) (myObjects map[string]*models.LogDomainStatus, err error) {
+	return Default.ReloadRecord(ctx)
 }
 
 func init() {

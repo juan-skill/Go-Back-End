@@ -16,7 +16,8 @@ func getNewDomain(t *testing.T) *models.Domain {
 
 	InitCockroach()
 
-	domain, err := models.NewDomain(false, false, "A+", testrandom.RandomSSLRating("B"), "https://server.com/icon.png", "Title of the page")
+	//domain, err := models.NewDomain(false, false, "google.com", "A+", testrandom.RandomSSLRating("B"), "https://server.com/icon.png", "Title of the page")
+	domain, err := models.NewDomain(false, false, "google.com", "", "", "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 	c.NotEmpty(domain)
 
@@ -61,7 +62,7 @@ func TestTransfertx(t *testing.T) {
 	store := NewStore()
 	domain1 := getNewDomain(t)
 	arg := TransferTxParams{
-		FromDomainID: domain1.DomainID,
+		FromDomain: domain1,
 	}
 
 	n := 5
@@ -110,16 +111,85 @@ func TestTransfertxFailure(t *testing.T) {
 	defer cancelfunc()
 
 	arg := TransferTxParams{
-		FromDomainID: "",
+		FromDomain: nil,
 	}
 
 	_, err := store.TransferTx(ctx, arg)
 	c.Error(err)
+}
 
-	arg.FromDomainID = "cae0ae1d-45bd-4dda-b939-cfb34569052b"
+func TestTransferTxPreSSL(t *testing.T) {
+	c := require.New(t)
 
-	_, err = store.TransferTx(ctx, arg)
-	c.Error(err)
+	// Iniciar la base de datos
+	InitCockroach()
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	// iniciar las operaciones de transacciones
+	store := NewStore()
+
+	// cargar los ultimos registros hace una hora
+	_, err := ReloadRecord(ctx)
+	c.NoError(err)
+
+	// crear un dominio que no está en la base de datos
+	domain1 := getNewDomain(t)
+
+	// guardamos una copia en la tabla cache
+	record, err := NewRecord(domain1)
+	c.NoError(err)
+	c.NotEmpty(record)
+
+	// reasingnar el attributo gradeSSL en la base de datos
+	arg := TransferTxParams{
+		FromDomain: domain1,
+	}
+
+	result, err := store.TransferTx(ctx, arg)
+	c.NoError(err)
+	c.Equal(domain1.SSLGrade, result.FromDomain.SSLGrade)
+
+	// guardamos una copia en la tabla cache con el nuevo estado gradeSSL
+	record, err = NewRecord(result.ToDomain)
+	c.NoError(err)
+	c.NotEmpty(record)
+
+	// reasignar el attributo previoGradeSSL
+	argPre := TransferTxParamsPreSSL{
+		FromDomain: domain1,
+	}
+
+	result1, err := store.TransferTxPreSSL(ctx, argPre)
+	c.NoError(err)
+	c.Equal(domain1.PreviousSSLGrade, result1.FromDomain.PreviousSSLGrade)
+
+	// guardar en la tabla cache este nuevo registro
+	record, err = NewRecord(domain1)
+	c.NoError(err)
+	c.NotEmpty(record)
+}
+
+// TestDelete
+func TestRomasnPere(t *testing.T) {
+	c := require.New(t)
+
+	InitCockroach()
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domains, err := GetDomains(ctx, "")
+	c.NoError(err)
+
+	for _, domain := range domains {
+		err = DeleteDomain(ctx, domain.DomainID)
+		c.Nil(err)
+	}
+
+	_, err = GetDomains(ctx, "")
+	c.NoError(err)
 }
 
 func BenchmarkTransferTx(b *testing.B) {
@@ -131,13 +201,13 @@ func BenchmarkTransferTx(b *testing.B) {
 	defer cancelfunc()
 
 	for i := 0; i < b.N; i++ {
-		domains, err := GetDomains(ctx)
+		domains, err := GetDomains(ctx, "")
 		if err != nil {
 			b.Fatal(err)
 		}
 
 		arg := TransferTxParams{
-			FromDomainID: domains[0].DomainID,
+			FromDomain: &domains[0],
 		}
 
 		_, err = store.TransferTx(ctx, arg)

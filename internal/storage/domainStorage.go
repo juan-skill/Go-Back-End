@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/other_project/crockroach/internal/logs"
@@ -12,6 +13,7 @@ const (
 	createDomain = `
 	INSERT INTO domains (
 		id,
+		domain_name,
 		serverChanged,
 		sslgrade,
 		previousslgrade,
@@ -21,27 +23,45 @@ const (
 		creationDate,
 		updateDate
 	) VALUES (
-		$1, $2, $3, $4, $5, $6, $7, $8, $9
+		$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 	) RETURNING *;
 	`
+
 	listDomains = `
 	SELECT * FROM domains
 	ORDER BY id
 	LIMIT $1
 	OFFSET $2
 	`
+
+	listDomainsByDate = `
+	SELECT id, domain_name, serverchanged, sslgrade, previousslgrade, logo, title, isdown, creationdate, updatedate 
+	FROM domains
+	WHERE domains.updatedate >= now() - '1 hours'::INTERVAL 
+    AND domains.updatedate <= now()
+	`
+
 	getDomain = `
 	SELECT * FROM domains
 	WHERE id = $1
 	ORDER BY sslgrade DESC
 	LIMIT 1
 	`
+
 	updateDomain = `
 	UPDATE domains
 	SET sslgrade = $2, updatedate = now()
 	WHERE id = $1
 	RETURNING *
 	`
+
+	updateDomainPrevioSSL = `
+	UPDATE domains
+	SET previousslgrade = $2, updatedate = now()
+	WHERE id = $1
+	RETURNING *
+	`
+
 	deleteDomain = `
 	DELETE FROM domains
 	WHERE id = $1
@@ -55,6 +75,8 @@ var (
 	ErrEmptyDomainID = errors.New("cannot be empty domain_id")
 	// ErrDomainNotFound to ensure that domain are returned
 	ErrDomainNotFound = errors.New("domain was not found")
+	// ErrEmptyDomain when it does not exist a domain
+	ErrEmptyDomain = errors.New("domain name cannot be empty")
 )
 
 // StoreDomain function will store a domain struct
@@ -64,7 +86,7 @@ func (q *Queries) StoreDomain(ctx context.Context, domain *models.Domain) (*mode
 		return nil, ErrInvalidDomain
 	}
 
-	row := CockroachClient.QueryRowContext(ctx, createDomain, domain.DomainID, domain.ServerChanged, domain.SSLGrade, domain.PreviousSSLGrade, domain.Logo, domain.Title, domain.IsDown, domain.CreationDate, domain.UpdateDate)
+	row := CockroachClient.QueryRowContext(ctx, createDomain, domain.DomainID, domain.DomainName, domain.ServerChanged, domain.SSLGrade, domain.PreviousSSLGrade, domain.Logo, domain.Title, domain.IsDown, domain.CreationDate, domain.UpdateDate)
 	if row.Err() != nil {
 		logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
@@ -74,6 +96,7 @@ func (q *Queries) StoreDomain(ctx context.Context, domain *models.Domain) (*mode
 
 	err := row.Scan(
 		&item.DomainID,
+		&item.DomainName,
 		&item.ServerChanged,
 		&item.SSLGrade,
 		&item.PreviousSSLGrade,
@@ -108,6 +131,7 @@ func (q *Queries) GetDomain(ctx context.Context, domainID string) (*models.Domai
 
 	err := row.Scan(
 		&item.DomainID,
+		&item.DomainName,
 		&item.ServerChanged,
 		&item.SSLGrade,
 		&item.PreviousSSLGrade,
@@ -126,8 +150,16 @@ func (q *Queries) GetDomain(ctx context.Context, domainID string) (*models.Domai
 }
 
 // GetDomains function will get a list of domains
-func (q *Queries) GetDomains(ctx context.Context) ([]models.Domain, error) {
-	rows, err := CockroachClient.QueryContext(ctx, listDomains, Limit, Offset)
+func (q *Queries) GetDomains(ctx context.Context, time string) ([]models.Domain, error) {
+	var rows *sql.Rows
+	var err error
+
+	if time == "" {
+		rows, err = CockroachClient.QueryContext(ctx, listDomains, Limit, Offset)
+	} else {
+		rows, err = CockroachClient.QueryContext(ctx, listDomainsByDate)
+	}
+
 	if err != nil {
 		logs.Log().Errorf("Query error %s", err.Error())
 		return nil, ErrInvalidQuery
@@ -137,8 +169,9 @@ func (q *Queries) GetDomains(ctx context.Context) ([]models.Domain, error) {
 
 	for rows.Next() {
 		item := new(models.Domain)
-		if err := rows.Scan(
+		err := rows.Scan(
 			&item.DomainID,
+			&item.DomainName,
 			&item.ServerChanged,
 			&item.SSLGrade,
 			&item.PreviousSSLGrade,
@@ -147,8 +180,15 @@ func (q *Queries) GetDomains(ctx context.Context) ([]models.Domain, error) {
 			&item.IsDown,
 			&item.CreationDate,
 			&item.UpdateDate,
-		); err != nil {
+		)
+
+		if err != nil {
 			logs.Log().Errorf("Scan error %s", err.Error())
+			return nil, err
+		}
+
+		item.Servers, err = q.GetServers(ctx, item.DomainID)
+		if err != nil {
 			return nil, err
 		}
 
@@ -169,27 +209,30 @@ func (q *Queries) GetDomains(ctx context.Context) ([]models.Domain, error) {
 }
 
 // UpdateDomain function will update a domain struct
-func (q *Queries) UpdateDomain(ctx context.Context, domainID, sslgrade string) (*models.Domain, error) {
-	if domainID == "" {
-		logs.Log().Errorf("cannot be empty domain_id attribute %s ", ErrEmptyDomainID.Error())
-		return nil, ErrEmptyDomainID
+func (q *Queries) UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain) (*models.Domain, error) {
+	var row *sql.Row
+
+	if domain == nil {
+		logs.Log().Errorf("cannot be empty domain_id attribute %s ", ErrEmptyDomain)
+		return nil, ErrEmptyDomain
 	}
 
-	if sslgrade == "" {
-		logs.Log().Errorf("cannot be empty sslgrade attribute %s ", ErrEmptySSLGrade.Error())
-		return nil, ErrEmptySSLGrade
+	if sslgrade != "" && previouSSL == "" {
+		row = CockroachClient.QueryRowContext(ctx, updateDomain, domain.DomainID, sslgrade)
+	} else if sslgrade == "" && previouSSL != "" {
+		row = CockroachClient.QueryRowContext(ctx, updateDomainPrevioSSL, domain.DomainID, previouSSL)
 	}
 
-	row := CockroachClient.QueryRowContext(ctx, updateDomain, domainID, sslgrade)
 	if row.Err() != nil {
 		logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
 
-	item := new(models.Domain)
+	item := *domain
 
 	err := row.Scan(
 		&item.DomainID,
+		&item.DomainName,
 		&item.ServerChanged,
 		&item.SSLGrade,
 		&item.PreviousSSLGrade,
@@ -204,7 +247,7 @@ func (q *Queries) UpdateDomain(ctx context.Context, domainID, sslgrade string) (
 		return nil, ErrScanRow
 	}
 
-	return item, err
+	return &item, err
 }
 
 // DeleteDomain function will update a domain struct

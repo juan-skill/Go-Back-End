@@ -19,7 +19,7 @@ func storeDomainTest(t *testing.T) *models.Domain {
 
 	// create a new Domain
 
-	domain, err := models.NewDomain(false, false, "A+", testrandom.RandomSSLRating("A+"), "https://server.com/icon.png", "Title of the page")
+	domain, err := models.NewDomain(false, false, "google.com", "A+", testrandom.RandomSSLRating("A+"), "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 	c.NotNil(domain)
 
@@ -119,7 +119,7 @@ func TestUpdateDomain(t *testing.T) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domain1, err := UpdateDomain(ctx, domain.DomainID, "A")
+	domain1, err := UpdateDomain(ctx, "A", "", domain)
 	c.NoError(err)
 	c.NotEmpty(domain1)
 
@@ -144,28 +144,18 @@ func TestUpdateDomainFailure(t *testing.T) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domain, err := UpdateDomain(ctx, "", "")
+	domain, err := UpdateDomain(ctx, "", "", nil)
 	c.Error(err)
 	c.Nil(domain)
-	c.EqualError(ErrEmptyDomainID, err.Error())
+	c.EqualError(ErrEmptyDomain, err.Error())
 
 	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domain, err = UpdateDomain(ctx, "cae0ae1d-45bd-4dda-b938-cfb34569052b", "")
+	domain, err = UpdateDomain(ctx, "", "A", nil)
 	c.Error(err)
 	c.Nil(domain)
-	c.EqualError(ErrEmptySSLGrade, err.Error())
-
-	domain, err = UpdateDomain(ctx, "", "A")
-	c.Error(err)
-	c.Nil(domain)
-	c.EqualError(ErrEmptyDomainID, err.Error())
-
-	domain, err = UpdateDomain(ctx, "cae0ae1d-45bd-4dda-b938-cfb34569052b", "B")
-	c.Error(err)
-	c.Nil(domain)
-	c.EqualError(ErrScanRow, err.Error())
+	c.EqualError(ErrEmptyDomain, err.Error())
 }
 
 func TestDeleteDomain(t *testing.T) {
@@ -205,7 +195,7 @@ func TestDeleteDomainFailure(t *testing.T) {
 	c.Error(err)
 	c.EqualError(ErrZeroRowsAffected, err.Error())
 
-	domains, err := GetDomains(ctx)
+	domains, err := GetDomains(ctx, "")
 	c.NoError(err)
 
 	for _, domain := range domains {
@@ -213,7 +203,7 @@ func TestDeleteDomainFailure(t *testing.T) {
 		c.Nil(err)
 	}
 
-	_, err = GetDomains(ctx)
+	_, err = GetDomains(ctx, "")
 	c.NoError(err)
 }
 
@@ -228,7 +218,7 @@ func TestGetDomains(t *testing.T) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domains, err := GetDomains(ctx)
+	domains, err := GetDomains(ctx, "")
 	c.NoError(err)
 
 	for _, domain := range domains {
@@ -246,7 +236,7 @@ func BenchmarkStoreDomain(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// create a new Domain
-		domain, err := models.NewDomain(false, false, "A+", "B", "https://server.com/icon.png", "Title of the page")
+		domain, err := models.NewDomain(false, false, "google.com", "A+", "B", "https://server.com/icon.png", "Title of the page")
 		if err != nil {
 			b.Fatal(err)
 		}
