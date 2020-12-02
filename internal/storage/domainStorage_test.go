@@ -119,7 +119,7 @@ func TestUpdateDomain(t *testing.T) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domain1, err := UpdateDomain(ctx, "A", "", domain)
+	domain1, err := UpdateDomain(ctx, "A", "", domain, false)
 	c.NoError(err)
 	c.NotEmpty(domain1)
 
@@ -144,7 +144,7 @@ func TestUpdateDomainFailure(t *testing.T) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domain, err := UpdateDomain(ctx, "", "", nil)
+	domain, err := UpdateDomain(ctx, "", "", nil, false)
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrEmptyDomain, err.Error())
@@ -152,7 +152,7 @@ func TestUpdateDomainFailure(t *testing.T) {
 	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domain, err = UpdateDomain(ctx, "", "A", nil)
+	domain, err = UpdateDomain(ctx, "", "A", nil, false)
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrEmptyDomain, err.Error())

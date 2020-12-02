@@ -88,7 +88,7 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 			return ErrEmptyServerByDomain
 		}
 
-		result.ToDomain, err = q.UpdateDomain(ctx, result.FromDomain.Servers[0].SSLGrade, "", arg.FromDomain)
+		result.ToDomain, err = q.UpdateDomain(ctx, result.FromDomain.Servers[0].SSLGrade, "", arg.FromDomain, false)
 		if err != nil {
 			logs.Log().Errorf(`error updatedomain %s`, err.Error())
 			return err
@@ -150,45 +150,116 @@ func (store *Store) TransferTxPreSSL(ctx context.Context, arg TransferTxParamsPr
 		}
 
 		lastRecord := result.ConsultTable[len(result.ConsultTable)-1]
-		fmt.Println("lastrecord --> ", lastRecord)
-		previoSSL := lastRecord.SSLGrade
-		fmt.Println("PREviossl lastrecord --> ", previoSSL)
-		//fmt.Println("ssl grade last record ", lastRecord.SSLGrade)
-		/*
-			var domainFounded *models.Domain
 
-			for key, value := range result.ConsultTable {
-				if value.Domain.DomainID == result.FromDomain.DomainID {
-					domainFounded = result.ConsultTable[key].Domain
+		result.ToDomain, err = q.UpdateDomain(ctx, "", lastRecord.SSLGrade, arg.FromDomain, false)
+		if err != nil {
+			logs.Log().Errorf(`error updatedomain %s`, err.Error())
+			return err
+		}
+
+		return nil
+	})
+
+	return result, err
+}
+
+// TransferTxParamsServerChange contains the input parameters of the transfer transaction
+type TransferTxParamsServerChange struct {
+	FromDomain *models.Domain `json:"from_domain"`
+}
+
+// TransferTxResultServerChange is the result of the transfer transaction
+type TransferTxResultServerChange struct {
+	FromDomain   *models.Domain   `json:"from_domain"`
+	ToDomain     *models.Domain   `json:"to_domain"`
+	ConsultTable []*models.Domain `json:"consult_table"`
+}
+
+// TransferTxServerChange performs a update ssl_grade attribute, transfer from ssl_grade server to ssl_grade domain
+func (store *Store) TransferTxServerChange(ctx context.Context, arg TransferTxParamsServerChange) (TransferTxResultServerChange, error) {
+	if arg.FromDomain == nil {
+		return TransferTxResultServerChange{}, ErrEmptyDomainID
+	}
+
+	var result TransferTxResultServerChange
+
+	err := store.execTx(ctx, func(q *Queries) error {
+		var err error
+
+		result.FromDomain, err = q.GetDomain(ctx, arg.FromDomain.DomainID)
+		if err != nil {
+			logs.Log().Errorf(`error getdomain %s`, err.Error())
+			return err
+		}
+
+		result.FromDomain.Servers, err = q.GetServers(ctx, arg.FromDomain.DomainID)
+		if err != nil {
+			logs.Log().Errorf(`error getservers by domain %s`, err.Error())
+			return err
+		}
+
+		if result.FromDomain.Servers == nil {
+			return ErrEmptyServerByDomain
+		}
+
+		result.ConsultTable, err = q.GetRecordByName(result.FromDomain)
+		if err != nil {
+			return err
+		}
+
+		if len(result.ConsultTable) == 0 {
+			result.ToDomain = arg.FromDomain
+			return nil
+		}
+
+		lastRecord := result.ConsultTable[len(result.ConsultTable)-1]
+		fmt.Println("lastrecord --> ", lastRecord)
+
+		serverChanged := false
+
+		if result.FromDomain != lastRecord {
+
+			count := 0
+			for i := 0; i < len(lastRecord.Servers); i++ {
+				if result.FromDomain.Servers[i].Address != lastRecord.Servers[i].Address {
+					//fmt.Println(*result.FromDomain.Servers[i], "--- \n ----", *lastRecord.Servers[i])
 					break
 				}
-			}
 
-			if domainFounded == nil {
-				return nil
-			}
-		*/
-
-		/*
-			countEquality := 0
-			numberServers := 0
-			if len(domainFounded.Servers) == len(result.FromDomain.Servers) {
-				numberServers = len(domainFounded.Servers)
-
-				for i := 0; i < numberServers; i++ {
-
-					if domainFounded.Servers[i].SSLGrade != result.FromDomain.Servers[i].SSLGrade {
-						countEquality++
-					}
+				if result.FromDomain.Servers[i].Country != lastRecord.Servers[i].Country {
+					//fmt.Println(*result.FromDomain.Servers[i], "--- \n ----", *lastRecord.Servers[i])
+					break
 				}
+
+				if result.FromDomain.Servers[i].Owner != lastRecord.Servers[i].Owner {
+					//fmt.Println(*result.FromDomain.Servers[i], "--- \n ----", *lastRecord.Servers[i])
+					break
+				}
+
+				if result.FromDomain.Servers[i].SSLGrade != lastRecord.Servers[i].SSLGrade {
+					//fmt.Println(*result.FromDomain.Servers[i], "--- \n ----", *lastRecord.Servers[i])
+					break
+				}
+				count++
+
+				//fmt.Println()
+				//fmt.Println(result.FromDomain.Servers[i], "--- \n ----", lastRecord.Servers[i])
 			}
 
-			if countEquality == numberServers {
-				return err
+			if count != len(lastRecord.Servers) {
+				serverChanged = true
+				/*
+					fmt.Println(count, len(lastRecord.Servers))
+					fmt.Println("serverchangeed --> ", serverChanged)
+					fmt.Println()
+					fmt.Println("result --> ", result.FromDomain, "\n last record -->", lastRecord)
+					fmt.Println()
+					fmt.Println(result.FromDomain.Servers[0], "\n", lastRecord.Servers[0])
+				*/
 			}
-		*/
+		}
 
-		result.ToDomain, err = q.UpdateDomain(ctx, "", previoSSL, arg.FromDomain)
+		result.ToDomain, err = q.UpdateDomain(ctx, "", "", arg.FromDomain, serverChanged)
 		if err != nil {
 			logs.Log().Errorf(`error updatedomain %s`, err.Error())
 			return err

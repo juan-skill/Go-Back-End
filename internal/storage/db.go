@@ -21,7 +21,7 @@ type DBTX interface {
 	GetServers(ctx context.Context, domainID string) ([]*models.Server, error)
 	StoreDomain(ctx context.Context, domain *models.Domain) (*models.Domain, error)
 	GetDomain(ctx context.Context, domainID string) (*models.Domain, error)
-	UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain) (*models.Domain, error)
+	UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain, serverChanged bool) (*models.Domain, error)
 	DeleteDomain(ctx context.Context, domainID string) error
 	GetDomains(ctx context.Context, time string) ([]models.Domain, error)
 	GetRecordByName(domain *models.Domain) (objects []*models.Domain, err error)
@@ -92,8 +92,8 @@ func GetDomain(ctx context.Context, domainID string) (*models.Domain, error) {
 }
 
 // UpdateDomain function will update a domain struct
-func UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain) (*models.Domain, error) {
-	return Default.UpdateDomain(ctx, sslgrade, previouSSL, domain)
+func UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain, serverChanged bool) (*models.Domain, error) {
+	return Default.UpdateDomain(ctx, sslgrade, previouSSL, domain, serverChanged)
 }
 
 // DeleteDomain function will delete a domain struct

@@ -50,14 +50,14 @@ const (
 
 	updateDomain = `
 	UPDATE domains
-	SET sslgrade = $2, updatedate = now()
+	SET sslgrade = $2, serverchanged = $3, updatedate = now()
 	WHERE id = $1
 	RETURNING *
 	`
 
 	updateDomainPrevioSSL = `
 	UPDATE domains
-	SET previousslgrade = $2, updatedate = now()
+	SET previousslgrade = $2, serverchanged = $3, updatedate = now()
 	WHERE id = $1
 	RETURNING *
 	`
@@ -209,7 +209,7 @@ func (q *Queries) GetDomains(ctx context.Context, time string) ([]models.Domain,
 }
 
 // UpdateDomain function will update a domain struct
-func (q *Queries) UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain) (*models.Domain, error) {
+func (q *Queries) UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain, serverChanged bool) (*models.Domain, error) {
 	var row *sql.Row
 
 	if domain == nil {
@@ -218,9 +218,11 @@ func (q *Queries) UpdateDomain(ctx context.Context, sslgrade, previouSSL string,
 	}
 
 	if sslgrade != "" && previouSSL == "" {
-		row = CockroachClient.QueryRowContext(ctx, updateDomain, domain.DomainID, sslgrade)
+		row = CockroachClient.QueryRowContext(ctx, updateDomain, domain.DomainID, sslgrade, serverChanged)
 	} else if sslgrade == "" && previouSSL != "" {
-		row = CockroachClient.QueryRowContext(ctx, updateDomainPrevioSSL, domain.DomainID, previouSSL)
+		row = CockroachClient.QueryRowContext(ctx, updateDomainPrevioSSL, domain.DomainID, previouSSL, serverChanged)
+	} else if sslgrade == "" && previouSSL == "" {
+		row = CockroachClient.QueryRowContext(ctx, updateDomainPrevioSSL, domain.DomainID, previouSSL, serverChanged)
 	}
 
 	if row.Err() != nil {

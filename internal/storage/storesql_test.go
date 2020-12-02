@@ -171,6 +171,80 @@ func TestTransferTxPreSSL(t *testing.T) {
 	c.NotEmpty(record)
 }
 
+func TestTransferTxServerChanged(t *testing.T) {
+	c := require.New(t)
+
+	// Iniciar la base de datos
+	InitCockroach()
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	// iniciar las operaciones de transacciones
+	store := NewStore()
+
+	// cargar los ultimos registros hace una hora
+	_, err := ReloadRecord(ctx)
+	c.NoError(err)
+
+	// crear un dominio que no está en la base de datos
+	domain1 := getNewDomain(t)
+
+	// guardamos una copia en la tabla cache
+	record, err := NewRecord(domain1)
+	c.NoError(err)
+	c.NotEmpty(record)
+
+	// reasingnar el attributo gradeSSL en la base de datos
+	arg := TransferTxParams{
+		FromDomain: domain1,
+	}
+
+	result, err := store.TransferTx(ctx, arg)
+	c.NoError(err)
+	c.Equal(domain1.SSLGrade, result.FromDomain.SSLGrade)
+
+	// guardamos una copia en la tabla cache con el nuevo estado gradeSSL
+	record, err = NewRecord(result.ToDomain)
+	c.NoError(err)
+	c.NotEmpty(record)
+
+	// reasignar el attributo previoGradeSSL
+	argPre := TransferTxParamsPreSSL{
+		FromDomain: domain1,
+	}
+
+	result1, err := store.TransferTxPreSSL(ctx, argPre)
+	c.NoError(err)
+	c.Equal(domain1.PreviousSSLGrade, result1.FromDomain.PreviousSSLGrade)
+
+	// guardar en la tabla cache este nuevo registro
+	record, err = NewRecord(result1.ToDomain)
+	c.NoError(err)
+	c.NotEmpty(record)
+
+	// reasignar el attributo serverchanged
+	argServer := TransferTxParamsServerChange{
+		FromDomain: domain1,
+	}
+
+	result2, err := store.TransferTxServerChange(ctx, argServer)
+	c.NoError(err)
+	c.NotEmpty(result2)
+	//c.Equal(domain1.PreviousSSLGrade, result2.FromDomain.PreviousSSLGrade)
+
+	// guardar en la tabla cache este nuevo registro
+	record, err = NewRecord(result2.ToDomain)
+	c.NoError(err)
+	c.NotEmpty(record)
+}
+
+/*
+
+
+
+ */
+
 // TestDelete
 func TestRomasnPere(t *testing.T) {
 	c := require.New(t)
