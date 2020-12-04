@@ -1,7 +1,10 @@
 package httphand
 
 import (
+	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/other_project/crockroach/internal/logs"
 	"github.com/stretchr/testify/require"
@@ -13,7 +16,10 @@ func TestProcessData(t *testing.T) {
 	err := logs.InitLogger()
 	c.NoError(err)
 
-	_, err = ProcessData("netflix.com")
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	_, err = ProcessData(ctx, "netflix.com")
 	c.NoError(err)
 }
 
@@ -55,4 +61,37 @@ func TestGetInfoDomainPage(t *testing.T) {
 
 	_, err = GetInfoDomainPage("gitlabb.com")
 	c.Error(err)
+}
+
+func TestInfoServers(t *testing.T) {
+	c := require.New(t)
+
+	info, err := InfoServers("netflix.com")
+	c.NoError(err)
+	c.NotEmpty(info)
+
+	info, err = InfoServers("rappi.com")
+	c.NoError(err)
+	c.NotEmpty(info)
+	c.NotEmpty(info.Endpoints)
+
+	info, err = InfoServers("eltiempo.com")
+	c.NoError(err)
+	c.NotEmpty(info)
+	c.Equal(len(info.Endpoints), 2)
+
+	_, err = InfoServers("")
+	c.Error(err)
+}
+
+func TestRunWHOIS(t *testing.T) {
+	c := require.New(t)
+
+	// 52.73.161.171 server netflix
+	iPAddress := "52.73.161.171"
+
+	command := fmt.Sprintf(`whois %s | grep -i %s | cut -f 2 -d ":" | sed 's/^ *//;s/ *$//'`, iPAddress, "country")
+	out, err := RunWHOIS("bash", "-c", command)
+	c.NoError(err)
+	c.NotEmpty(string(out))
 }

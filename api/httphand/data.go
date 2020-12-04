@@ -1,9 +1,13 @@
 package httphand
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os/exec"
 	"regexp"
 	"time"
 
@@ -12,11 +16,69 @@ import (
 	"github.com/other_project/crockroach/models"
 )
 
+// InfoLabSSLEndpoints contain the information of a domain
+type InfoLabSSLEndpoints struct {
+	IPAddress         string
+	ServerName        string
+	StatusMessage     string
+	Grade             string
+	GradeTrustIgnored string
+	HasWarmings       string
+	IsExceptional     bool
+	Progress          int64
+	Duration          int64
+	Delegation        int64
+}
+
+// InfoLabSSL contain the info SSL LAB API
+type InfoLabSSL struct {
+	Host            string
+	Port            int64
+	Protocol        string
+	IsPublic        bool
+	Status          string
+	StartTime       int64
+	TestTime        int64
+	EngineVersion   string
+	CriteriaVersion string
+	Endpoints       []*InfoLabSSLEndpoints
+}
+
+// ParseServerJSON model structure for parse server
+type ParseServerJSON struct {
+	Address  string `json:"address"`
+	SSLGrade string `json:"ssl_grade"`
+	Country  string `json:"country"`
+	Owner    string `json:"owner"`
+}
+
+//InfoWHOISCommand model struct owner and country
+type InfoWHOISCommand struct {
+	country string
+	owner   string
+}
+
+// ParseDomainJSON model structure for parse domain
+type ParseDomainJSON struct {
+	Servers          []*ParseServerJSON `json:"servers"`
+	ServerChanged    bool               `json:"servers_changed"`
+	SSLGrade         string             `json:"ssl_grade"`
+	PreviousSSLGrade string             `json:"previous_ssl_grade"`
+	Logo             string             `json:"logo"`
+	Title            string             `json:"title"`
+	IsDown           bool               `json:"is_down"`
+}
+
 // InfoDomainPage contain the information about the domain
 type InfoDomainPage struct {
 	Title string
 	Logo  string
 }
+
+const (
+	// Timeout time to perform the request to the API
+	Timeout = 15 * time.Second
+)
 
 var (
 	// ErrEmptyDomainName when check the status server
@@ -24,7 +86,7 @@ var (
 )
 
 // ProcessData to build the domain object
-func ProcessData(domainName string) (*models.Domain, error) {
+func ProcessData(ctx context.Context, domainName string) (*models.Domain, error) {
 	isDown, err := GetStatusServer(domainName)
 	if err != nil {
 		logs.Log().Errorf("Error isDown %s", err.Error())
@@ -43,6 +105,39 @@ func ProcessData(domainName string) (*models.Domain, error) {
 		return nil, err
 	}
 
+	infoDomainSSL, err := InfoServers(domainName)
+	if err != nil {
+		logs.Log().Errorf("cannot extract info the domain %s", err.Error())
+		return nil, err
+	}
+
+	fmt.Println("struct 2 ", infoDomainSSL)
+
+	servers := infoDomainSSL.Endpoints
+
+	serversNumber := len(servers)
+
+	for i := 0; i < serversNumber; i++ {
+		serverSSL := servers[i]
+
+		infoWhois, err := getInfoWhois(serverSSL.IPAddress)
+		if err != nil {
+			logs.Log().Errorf("cannot extract Country whois command: %s", err.Error())
+			return nil, err
+		}
+
+		fmt.Printf(`key2: %s, value2: %s`, "country", infoWhois.country)
+		fmt.Printf(`key2: %s, value2: %s`, "owner", infoWhois.owner)
+
+		server, err := models.NewServer(serverSSL.IPAddress, serverSSL.Grade, infoWhois.country, infoWhois.owner, domain)
+		if err != nil {
+			logs.Log().Errorf("cannot create the server of the domain %s", err.Error())
+			return nil, err
+		}
+
+		domain.Servers = append(domain.Servers, server)
+	}
+
 	return domain, nil
 }
 
@@ -53,7 +148,7 @@ func GetStatusServer(domainName string) (bool, error) {
 	}
 
 	url := fmt.Sprintf("https://%s", domainName)
-	timeout := time.Duration(5 * time.Second)
+	timeout := time.Duration(Timeout)
 	client := http.Client{
 		Timeout: timeout,
 	}
@@ -93,7 +188,7 @@ func GetInfoDomainPage(domainName string) (*InfoDomainPage, error) {
 	}
 
 	url := fmt.Sprintf("https://%s", domainName)
-	timeout := time.Duration(5 * time.Second)
+	timeout := time.Duration(Timeout)
 	client := http.Client{
 		Timeout: timeout,
 	}
@@ -169,4 +264,127 @@ func GetInfoDomainPage(domainName string) (*InfoDomainPage, error) {
 		Title: title,
 		Logo:  iconPath,
 	}, nil
+}
+
+// InfoServers ...
+func InfoServers(domain string) (*InfoLabSSL, error) {
+	if domain == "" {
+		return nil, ErrEmptyDomainName
+	}
+
+	url := fmt.Sprintf("https://api.ssllabs.com/api/v3/analyze?host=%s", domain)
+
+	timeout := time.Duration(Timeout)
+
+	client := http.Client{
+		Timeout: timeout,
+	}
+
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		logs.Log().Errorf("Error wraps request %s", err.Error())
+		return nil, err
+	}
+
+	resp, err := client.Do(request)
+	if err != nil {
+		logs.Log().Errorf("Error wraps request %s", err.Error())
+		return nil, err
+	}
+
+	defer func() {
+		erro := resp.Body.Close()
+		if erro != nil {
+			logs.Log().Errorf("Error response body close %s ", erro.Error())
+		}
+	}()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logs.Log().Errorf("Error response body close %s ", err.Error())
+		return nil, err
+	}
+
+	var infoDomainSSL InfoLabSSL
+
+	err = json.Unmarshal(body, &infoDomainSSL)
+	if err != nil {
+		logs.Log().Errorf("Error unmarshal infoDomainSSL %s ", err.Error())
+		return nil, err
+	}
+
+	fmt.Println("struct 1", infoDomainSSL)
+
+	return &infoDomainSSL, nil
+}
+
+// RunWHOIS get info about domin
+func RunWHOIS(cmd string, args ...string) (string, error) {
+	value, err := exec.Command("bash", args...).Output() //nolint:gosec
+	if err != nil {
+		fmt.Printf("Failed to execute command: %s", err.Error())
+		return "", err
+	}
+
+	return string(value), nil
+}
+
+// getInfoWhois ....
+func getInfoWhois(ipAddress string) (*InfoWHOISCommand, error) {
+	infoWhois := new(InfoWHOISCommand)
+
+	command := fmt.Sprintf(`whois %s | grep -i %s | cut -f 2 -d ":" | sed 's/^ *//;s/ *$//'`, ipAddress, "country")
+
+	value, err := RunWHOIS("bash", "-c", command)
+	if err != nil {
+		fmt.Printf("cannot extract country whois command %s", err.Error())
+		return nil, err
+	}
+
+	infoWhois.country = string(value)
+
+	command = fmt.Sprintf(`whois %s | grep -i %s | cut -f 2 -d ":" | sed 's/^ *//;s/ *$//'`, ipAddress, "name")
+
+	value, err = RunWHOIS("bash", "-c", command)
+	if err != nil {
+		fmt.Printf("cannot extract name whois command %s", err.Error())
+		return nil, err
+	}
+
+	infoWhois.owner = string(value)
+
+	fmt.Printf(`key1: %s, value1: %s`, "country", infoWhois.country)
+	fmt.Printf(`key1: %s, value1: %s`, "owner", infoWhois.owner)
+
+	return infoWhois, nil
+}
+
+// parseJSON parse the data to return to the API
+func parseJSON(domain *models.Domain) *ParseDomainJSON {
+	parseDomain := new(ParseDomainJSON)
+
+	serversNumber := len(domain.Servers)
+	fmt.Println(serversNumber)
+
+	if len(domain.Servers) == 0 {
+		return nil
+	}
+
+	for i := 0; i < serversNumber; i++ {
+		parseServer := new(ParseServerJSON)
+		parseServer.Address = domain.Servers[i].Address
+		parseServer.SSLGrade = domain.Servers[i].SSLGrade
+		parseServer.Country = domain.Servers[i].Country
+		parseServer.Owner = domain.Servers[i].Owner
+		parseDomain.Servers = append(parseDomain.Servers, parseServer)
+	}
+
+	parseDomain.ServerChanged = domain.ServerChanged
+	parseDomain.SSLGrade = domain.SSLGrade
+	parseDomain.PreviousSSLGrade = domain.PreviousSSLGrade
+	parseDomain.Logo = domain.Logo
+	parseDomain.Title = domain.Title
+	parseDomain.IsDown = domain.IsDown
+
+	return parseDomain
 }

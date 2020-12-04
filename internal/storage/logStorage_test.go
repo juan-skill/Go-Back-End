@@ -36,7 +36,7 @@ func newDomainTest(t *testing.T) *models.Domain {
 		c.NoError(err)
 		c.NotNil(server)
 
-		server1, err := StoreServer(ctx, server)
+		server1, err := StoreServer(ctx, server, domain)
 		c.NoError(err)
 		c.NotEmpty(server1)
 

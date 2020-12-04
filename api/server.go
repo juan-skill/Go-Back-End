@@ -2,12 +2,12 @@ package api
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi"
 
+	"github.com/other_project/crockroach/internal/logs"
 	"github.com/other_project/crockroach/internal/storage"
 	"github.com/other_project/crockroach/shared/cockroachdb"
 	"github.com/other_project/crockroach/shared/env"
@@ -15,9 +15,9 @@ import (
 
 const (
 	// ReadTimeout ...
-	ReadTimeout = 10 * time.Second
+	ReadTimeout = 15 * time.Second
 	// WriteTimeout ...
-	WriteTimeout = 10 * time.Second
+	WriteTimeout = 15 * time.Second
 )
 
 var (
@@ -55,5 +55,10 @@ func NewServer(mux *chi.Mux) *MyServer {
 
 // Run launch the  server
 func (s *MyServer) Run() {
-	log.Fatal(s.server.ListenAndServe())
+	//log.Fatal(s.server.ListenAndServe())
+	err := s.server.ListenAndServe()
+	if err != nil {
+		logs.Log().Errorf(`Error run server . %s `, err.Error())
+		return
+	}
 }

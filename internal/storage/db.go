@@ -14,7 +14,7 @@ var (
 
 // DBTX interface
 type DBTX interface {
-	StoreServer(ctx context.Context, server *models.Server) (*models.Server, error)
+	StoreServer(ctx context.Context, server *models.Server, domain *models.Domain) (*models.Server, error)
 	GetServer(ctx context.Context, serverID string) (*models.Server, error)
 	UpdateServer(ctx context.Context, serverID, sslgrade string) (*models.Server, error)
 	DeleteServer(ctx context.Context, serverID string) error
@@ -57,8 +57,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 */
 
 // StoreServer function will store a server in the database.
-func StoreServer(ctx context.Context, server *models.Server) (*models.Server, error) {
-	return Default.StoreServer(ctx, server)
+func StoreServer(ctx context.Context, server *models.Server, domain *models.Domain) (*models.Server, error) {
+	return Default.StoreServer(ctx, server, domain)
 }
 
 // GetServer function will retrieve a server in the database.

@@ -37,7 +37,8 @@ func (store *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
 
 	err = fn(q)
 	if err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
+		rbErr := tx.Rollback()
+		if rbErr != nil {
 			logs.Log().Errorf("tx err: %v, rb err: %v", err, rbErr)
 			return err
 		}
@@ -46,6 +47,56 @@ func (store *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
 	}
 
 	return tx.Commit()
+}
+
+// TransferTxParamsServers contains the input parameters of the transfer transaction
+type TransferTxParamsServers struct {
+	FromDomain *models.Domain `json:"from_domain"`
+}
+
+// TransferTxResultServers is the result of the transfer transaction
+type TransferTxResultServers struct {
+	FromDomain *models.Domain `json:"from_domain"`
+}
+
+// TransferTxServers performs a update servers attribute
+func (store *Store) TransferTxServers(ctx context.Context, arg TransferTxParamsServers) (TransferTxResultServers, error) {
+	if arg.FromDomain == nil {
+		return TransferTxResultServers{}, ErrEmptyDomainID
+	}
+
+	var result TransferTxResultServers
+
+	err := store.execTx(ctx, func(q *Queries) error {
+		var err error
+
+		result.FromDomain, err = q.StoreDomain(ctx, arg.FromDomain)
+		if err != nil {
+			logs.Log().Errorf(`error Store Domain %s`, err.Error())
+			return err
+		}
+
+		serversNumber := len(result.FromDomain.Servers)
+
+		if len(result.FromDomain.Servers) == 0 {
+			logs.Log().Errorf(`error Not Found servers of the domain`)
+			return err
+		}
+
+		for i := 0; i < serversNumber; i++ {
+			server := result.FromDomain.Servers[i]
+
+			_, erro := q.StoreServer(ctx, server, result.FromDomain)
+			if erro != nil {
+				logs.Log().Errorf(`error in create a server of the domain: %s`, erro.Error())
+				return erro
+			}
+		}
+
+		return nil
+	})
+
+	return result, err
 }
 
 // TransferTxParams contains the input parameters of the transfer transaction
@@ -269,4 +320,105 @@ func (store *Store) TransferTxServerChange(ctx context.Context, arg TransferTxPa
 	})
 
 	return result, err
+}
+
+// TransferTxParamsInitialize contains the input parameters of the transfer transaction
+type TransferTxParamsInitialize struct {
+	FromDomain *models.Domain `json:"from_domain"`
+}
+
+// TransferTxResultInitialize is the result of the transfer transaction
+type TransferTxResultInitialize struct {
+	FromServers  []*models.Server `json:"from_servers"`
+	ConsultTable []*models.Domain `json:"from_domains"`
+	ToDomain     *models.Domain   `json:"to_domain"`
+}
+
+// TransferTxInitialize performs a update ssl_grade attribute, transfer from ssl_grade server to ssl_grade domain
+func (store *Store) TransferTxInitialize(ctx context.Context, arg TransferTxParamsInitialize) (TransferTxResultInitialize, error) {
+	if arg.FromDomain == nil {
+		return TransferTxResultInitialize{}, ErrEmptyDomainID
+	}
+
+	var result TransferTxResultInitialize
+
+	err := store.execTx(ctx, func(q *Queries) error {
+		var err error
+
+		result.FromServers, err = q.GetServers(ctx, arg.FromDomain.DomainID)
+		if err != nil {
+			logs.Log().Errorf(`error getservers by domain %s`, err.Error())
+			return err
+		}
+
+		if result.FromServers == nil {
+			return ErrEmptyServerByDomain
+		}
+
+		// servidores ordenados para tomar el primer servidor ssl_grade
+		arg.FromDomain.Servers = result.FromServers
+
+		// consultamos la tabla para saber los últimos registros
+		result.ConsultTable, err = q.GetRecordByName(arg.FromDomain)
+		if err != nil {
+			return err
+		}
+
+		var sslGrade string
+		var serverChanged bool
+		if len(result.ConsultTable) == 0 {
+			sslGrade = ""
+			serverChanged = false
+		} else {
+			// el último registro de hace una hora para comparar
+			lastRecord := result.ConsultTable[len(result.ConsultTable)-1]
+			sslGrade = lastRecord.SSLGrade
+
+			serverChanged = compareTwoDomains(arg.FromDomain, lastRecord)
+		}
+
+		result.ToDomain, err = q.UpdateDomain(ctx, arg.FromDomain.Servers[0].SSLGrade, sslGrade, arg.FromDomain, serverChanged)
+		if err != nil {
+			logs.Log().Errorf(`error updatedomain %s`, err.Error())
+			return err
+		}
+
+		return nil
+	})
+
+	return result, err
+}
+
+// compareTwoDomains compare the current domain between a domain 1 hour ago
+func compareTwoDomains(current, lastRecord *models.Domain) bool {
+	serverChanged := false
+
+	if current != lastRecord {
+		count := 0
+
+		for i := 0; i < len(lastRecord.Servers); i++ {
+			if current.Servers[i].Address != lastRecord.Servers[i].Address {
+				break
+			}
+
+			if current.Servers[i].Country != lastRecord.Servers[i].Country {
+				break
+			}
+
+			if current.Servers[i].Owner != lastRecord.Servers[i].Owner {
+				break
+			}
+
+			if current.Servers[i].SSLGrade != lastRecord.Servers[i].SSLGrade {
+				break
+			}
+			count++
+		}
+
+		if count != len(lastRecord.Servers) {
+			serverChanged = true
+		}
+	}
+
+	return serverChanged
 }

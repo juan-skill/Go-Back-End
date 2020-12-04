@@ -37,7 +37,7 @@ func getNewDomain(t *testing.T) *models.Domain {
 		c.NoError(err)
 		c.NotNil(server)
 
-		server1, err := StoreServer(ctx, server)
+		server1, err := StoreServer(ctx, server, domain)
 		c.NoError(err)
 		c.NotEmpty(server1)
 
@@ -239,6 +239,43 @@ func TestTransferTxServerChanged(t *testing.T) {
 	c.NotEmpty(record)
 }
 
+func TestTransferTxServers(t *testing.T) {
+	c := require.New(t)
+
+	InitCockroach()
+
+	store := NewStore()
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	domain, err := models.NewDomain(false, false, "google.com", "", "", "https://server.com/icon.png", "Title of the page")
+	c.NoError(err)
+
+	serverNumber := testrandom.RandomServerNumber()
+	var i int64
+
+	for i = 0; i < serverNumber; i++ {
+		server, erro := models.NewServer("server1", testrandom.RandomSSLRating(""), "US", "Amazon.com, Inc.", domain)
+		c.NoError(erro)
+		c.NotNil(server)
+
+		domain.Servers = append(domain.Servers, server)
+	}
+
+	c.Equal(domain.DomainID, domain.Servers[0].Domain.DomainID)
+	c.Equal(serverNumber, int64(len(domain.Servers)))
+
+	// reasignar el attributo previoGradeSSL
+	argPre := TransferTxParamsServers{
+		FromDomain: domain,
+	}
+
+	result1, err := store.TransferTxServers(ctx, argPre)
+	c.NoError(err)
+	c.Equal(domain.Servers[0], result1.FromDomain.Servers[0])
+}
+
 /*
 
 
@@ -289,4 +326,65 @@ func BenchmarkTransferTx(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+}
+
+func TestTransferTxInitialize(t *testing.T) {
+	c := require.New(t)
+
+	// Iniciar la base de datos
+	InitCockroach()
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	// iniciar las operaciones de transacciones
+	store := NewStore()
+
+	// cargar los ultimos registros hace una hora
+	_, err := ReloadRecord(ctx)
+	c.NoError(err)
+
+	domain, err := models.NewDomain(false, false, "google.com", "A+", testrandom.RandomSSLRating("B"), "https://server.com/icon.png", "Title of the page")
+	c.NoError(err)
+
+	serverNumber := testrandom.RandomServerNumber()
+	var i int64
+
+	for i = 0; i < serverNumber; i++ {
+		// create a new Server
+		server, erro := models.NewServer("server1", testrandom.RandomSSLRating(""), "US", "Amazon.com, Inc.", domain)
+		c.NoError(erro)
+		c.NotNil(server)
+
+		domain.Servers = append(domain.Servers, server)
+	}
+
+	// reasignar el attributo Servers
+	argPre := TransferTxParamsServers{
+		FromDomain: domain,
+	}
+
+	result1, err := store.TransferTxServers(ctx, argPre)
+	c.NoError(err)
+	c.NotEmpty(result1)
+
+	//////////////////////////////////////////////////////////////////////
+	record, err := NewRecord(result1.FromDomain)
+	c.NoError(err)
+	c.NotEmpty(record)
+	//////////////////////////////////////////////////////////////////////
+
+	// reasignar el attributo previoGradeSSL
+	argIni := TransferTxParamsInitialize{
+		FromDomain: domain,
+	}
+
+	result2, err := store.TransferTxInitialize(ctx, argIni)
+	c.NoError(err)
+	c.NotEmpty(result2)
+
+	//////////////////////////////////////////////////////////////////////
+	record, err = NewRecord(result2.ToDomain)
+	c.NoError(err)
+	c.NotEmpty(record)
 }

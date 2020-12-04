@@ -1,18 +1,18 @@
 package httphand
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"time"
 
 	"github.com/other_project/crockroach/internal/logs"
-	db "github.com/other_project/crockroach/internal/storage"
-	"github.com/other_project/crockroach/models"
+	"github.com/other_project/crockroach/internal/storage"
 )
 
 // NewHandlerRequest ...
-func NewHandlerRequest(store *db.Store) *HandlerRequest {
+func NewHandlerRequest(store *storage.Store) *HandlerRequest {
 	return &HandlerRequest{
 		store: store,
 	}
@@ -20,7 +20,7 @@ func NewHandlerRequest(store *db.Store) *HandlerRequest {
 
 // HandlerRequest ...
 type HandlerRequest struct {
-	store *db.Store
+	store *storage.Store
 }
 
 // RequestBody contain the information of body of the request
@@ -30,15 +30,46 @@ type RequestBody struct {
 
 // Create a new domain
 func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
-	cmd := parseRequest(r, w)
+	domainName := parseRequest(r, w)
 
-	domain, err := p.store.StoreDomain(r.Context(), cmd)
+	ctx, cancelfunc := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancelfunc()
+
+	_, err := p.store.ReloadRecord(ctx)
 	if err != nil {
-		respondWithError(w, http.StatusNoContent, "error in create domain")
-		return
+		respondWithError(w, http.StatusBadGateway, "can't reload the last domains")
 	}
 
-	respondwithJSON(w, http.StatusCreated, domain)
+	domain, err := ProcessData(ctx, domainName)
+	if err != nil {
+		respondWithError(w, http.StatusBadGateway, "can't create the domain")
+	}
+
+	// reasignar el attributo Servers
+	argPre := storage.TransferTxParamsServers{
+		FromDomain: domain,
+	}
+
+	result1, err := p.store.TransferTxServers(r.Context(), argPre)
+	if err != nil {
+		respondWithError(w, http.StatusNoContent, "error in create a server of the domain")
+	}
+
+	nDomain := result1.FromDomain
+
+	// reasignar el attributo previoGradeSSL
+	argIni := storage.TransferTxParamsInitialize{
+		FromDomain: nDomain,
+	}
+
+	result2, err := p.store.TransferTxInitialize(ctx, argIni)
+	if err != nil {
+		respondWithError(w, http.StatusNoContent, "error in create a server of the domain")
+	}
+
+	parseResponse := parseJSON(result2.ToDomain)
+
+	respondwithJSON(w, http.StatusCreated, parseResponse)
 }
 
 // respondwithJSON write json response format
@@ -62,7 +93,8 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 	respondwithJSON(w, code, map[string]string{"message": msg})
 }
 
-func parseRequest(r *http.Request, w http.ResponseWriter) *models.Domain {
+// parseRequest extract the body of the request
+func parseRequest(r *http.Request, w http.ResponseWriter) string {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "can't read body")
@@ -73,13 +105,8 @@ func parseRequest(r *http.Request, w http.ResponseWriter) *models.Domain {
 
 	err = json.Unmarshal(body, &reqBody)
 	if err != nil {
-		log.Println(err)
+		logs.Log().Errorf("Error Unmarshal request body", err.Error())
 	}
 
-	domain, err := ProcessData(reqBody.DomainName)
-	if err != nil {
-		respondWithError(w, http.StatusBadGateway, "can't create the domain")
-	}
-
-	return domain
+	return reqBody.DomainName
 }
