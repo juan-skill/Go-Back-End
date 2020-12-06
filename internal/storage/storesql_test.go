@@ -344,7 +344,7 @@ func TestTransferTxInitialize(t *testing.T) {
 	_, err := ReloadRecord(ctx)
 	c.NoError(err)
 
-	domain, err := models.NewDomain(false, false, "google.com", "A+", testrandom.RandomSSLRating("B"), "https://server.com/icon.png", "Title of the page")
+	domain, err := models.NewDomain(false, false, testrandom.RandomNameDomain(), "", "", "https://server.com/icon.png", "Title of the page")
 	c.NoError(err)
 
 	serverNumber := testrandom.RandomServerNumber()

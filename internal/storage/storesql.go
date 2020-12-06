@@ -79,8 +79,8 @@ func (store *Store) TransferTxServers(ctx context.Context, arg TransferTxParamsS
 		serversNumber := len(result.FromDomain.Servers)
 
 		if len(result.FromDomain.Servers) == 0 {
-			logs.Log().Errorf(`error Not Found servers of the domain`)
-			return err
+			logs.Log().Errorf(`error Not Found servers of the domain %s:`, ErrEmptyServerByDomain.Error())
+			return ErrEmptyServerByDomain
 		}
 
 		for i := 0; i < serversNumber; i++ {

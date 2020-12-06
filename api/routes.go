@@ -24,6 +24,7 @@ func Routes(store *db.Store) *chi.Mux {
 
 	mux.Get("/status", showStatus)
 	mux.Post("/domain", handler.Create)
+	mux.Get("/get-last-domains", handler.GetLastDomains)
 
 	return mux
 }

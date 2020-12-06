@@ -125,10 +125,9 @@ func TestUpdateDomain(t *testing.T) {
 
 	c.NotEqual(domain.SSLGrade, domain1.SSLGrade)
 	c.Equal(domain1.SSLGrade, "A")
-	//c.Equal(domain.ServerID, domain1.ServerID)
 	c.Equal(domain.DomainID, domain1.DomainID)
 	c.Equal(domain.ServerChanged, domain1.ServerChanged)
-	//c.Equal(domain.PreviousSSLGrade, domain1.PreviousSSLGrade)
+	c.NotEqual(domain.PreviousSSLGrade, domain1.PreviousSSLGrade)
 	c.Equal(domain.Logo, domain1.Logo)
 	c.Equal(domain.Title, domain1.Title)
 	c.Equal(domain.IsDown, domain1.IsDown)

@@ -38,11 +38,13 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 	_, err := p.store.ReloadRecord(ctx)
 	if err != nil {
 		respondWithError(w, http.StatusBadGateway, "can't reload the last domains")
+		return
 	}
 
 	domain, err := ProcessData(ctx, domainName)
 	if err != nil {
 		respondWithError(w, http.StatusBadGateway, "can't create the domain")
+		return
 	}
 
 	// reasignar el attributo Servers
@@ -53,6 +55,7 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 	result1, err := p.store.TransferTxServers(r.Context(), argPre)
 	if err != nil {
 		respondWithError(w, http.StatusNoContent, "error in create a server of the domain")
+		return
 	}
 
 	nDomain := result1.FromDomain
@@ -65,11 +68,27 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 	result2, err := p.store.TransferTxInitialize(ctx, argIni)
 	if err != nil {
 		respondWithError(w, http.StatusNoContent, "error in create a server of the domain")
+		return
 	}
 
 	parseResponse := parseJSON(result2.ToDomain)
 
 	respondwithJSON(w, http.StatusCreated, parseResponse)
+}
+
+// GetLastDomains get the last records
+func (p *HandlerRequest) GetLastDomains(w http.ResponseWriter, r *http.Request) {
+	ctx, cancelfunc := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancelfunc()
+
+	_, err := p.store.ReloadRecord(ctx)
+	if err != nil {
+		respondWithError(w, http.StatusBadGateway, "can't reload the last domains")
+		return
+	}
+
+	mapl := p.store.GetLastDomain()
+	respondwithJSON(w, http.StatusAccepted, mapl)
 }
 
 // respondwithJSON write json response format
@@ -84,7 +103,7 @@ func respondwithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 	_, err = w.Write(response)
 	if err != nil {
-		logs.Log().Errorf("Error Write response ", err.Error())
+		logs.Log().Errorf("Error Write response %s", err.Error())
 	}
 }
 
@@ -97,15 +116,17 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 func parseRequest(r *http.Request, w http.ResponseWriter) string {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
+		logs.Log().Errorf("cannot ReadAll body request: %s ", err.Error())
 		respondWithError(w, http.StatusBadRequest, "can't read body")
-		print(err)
+		return ""
 	}
 
 	var reqBody RequestBody
 
 	err = json.Unmarshal(body, &reqBody)
 	if err != nil {
-		logs.Log().Errorf("Error Unmarshal request body", err.Error())
+		logs.Log().Errorf("Error Unmarshal request body: %s", err.Error())
+		return ""
 	}
 
 	return reqBody.DomainName

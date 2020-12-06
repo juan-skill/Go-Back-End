@@ -22,16 +22,41 @@ func (q *Queries) GetRecordByName(domain *models.Domain) (records []*models.Doma
 	recordByIds := []*models.Domain{}
 
 	for _, value := range Objects {
-		if domain.DomainID == value.Domain.DomainID {
+		if domain.DomainName == value.Domain.DomainName {
 			recordByIds = append(recordByIds, value.Domain)
 		}
 	}
+
+	fmt.Println()
+	fmt.Println(Objects)
+	fmt.Println()
 
 	for i := 0; i < len(recordByIds); i++ {
 		fmt.Println("getrecordbyname --> ", recordByIds[i])
 	}
 
 	return recordByIds, nil
+}
+
+// GetLastDomain list the last domains consulted
+func (q *Queries) GetLastDomain() map[string]*models.Domain {
+	fmt.Println()
+	fmt.Println(Objects)
+	fmt.Println()
+
+	myObjects := make(map[string]*models.Domain)
+
+	for _, value := range Objects {
+		myObjects[value.DomainName] = value.Domain
+		fmt.Println("value ---> ", value.Domain)
+	}
+
+	fmt.Println()
+	fmt.Println("objects --> ", myObjects)
+
+	fmt.Println()
+
+	return myObjects
 }
 
 // NewRecord creates a new record about of last record/changes
