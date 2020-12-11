@@ -11,6 +11,7 @@ import (
 	"github.com/other_project/crockroach/internal/storage"
 	"github.com/other_project/crockroach/shared/cockroachdb"
 	"github.com/other_project/crockroach/shared/env"
+	"github.com/rs/cors"
 )
 
 const (
@@ -34,9 +35,11 @@ type MyServer struct {
 
 // NewServer initialize the server instance
 func NewServer(mux *chi.Mux) *MyServer {
+	handler := cors.Default().Handler(mux)
+
 	s := &http.Server{
 		Addr:           PortServer,
-		Handler:        mux,
+		Handler:        handler,
 		ReadTimeout:    ReadTimeout,
 		WriteTimeout:   WriteTimeout,
 		MaxHeaderBytes: 1 << 20,

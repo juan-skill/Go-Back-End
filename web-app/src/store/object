@@ -1,0 +1,21 @@
+
+Object { 
+    servers: (2) […], 
+        1: {…}
+            address: "34.193.204.92"
+            country: "US\n"
+            owner: "AT-88-Z\nAmazon Technologies Inc.\nAmazon AWS Network Operations\nAmazon EC2 Network Operations\nAWS Dogfish Routing\nIP Routing\nAmazon EC2 Abuse\n"            ​​​
+            ssl_grade: "A"​​​​​​
+        2: {…}
+            address: "34.193.204.92"
+            country: "US\n"
+            owner: "AT-88-Z\nAmazon Technologies Inc.\nAmazon AWS Network Operations\nAmazon EC2 Network Operations\nAWS Dogfish Routing\nIP Routing\nAmazon EC2 Abuse\n"            ​​​
+            ssl_grade: "A"​​​
+
+    servers_changed: true, 
+    ssl_grade: "A", previous_ssl_grade: "", 
+    logo: "https://assets.website-files.com/5b559a554de48fbcb01fd277/5b97f0ac932c3291fa40d053_icon32.png", 
+    title: "Truora | Validación de Antecedentes e Identidad Digital", 
+    is_down: false 
+}
+
