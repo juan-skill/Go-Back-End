@@ -1,6 +1,6 @@
 <template>
   <v-footer app dark padless>
-    <v-card class="flex" flat tile>
+    <v-card class="flex" color="deep-purple accent-4" flat tile>
       <v-card-title class="teal">
         <strong class="subheading"
           >Get connected with us on social networks!</strong
@@ -15,7 +15,7 @@
         </v-btn>
       </v-card-title>
 
-      <v-card-text class="py-2 white--text text-center">
+      <v-card-text class="py-2 white--text deep-purple accent-4 text-center">
         {{ new Date().getFullYear() }} — <strong>Vuetify</strong>
       </v-card-text>
     </v-card>

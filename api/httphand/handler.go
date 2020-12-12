@@ -60,6 +60,12 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 
 	nDomain := result1.FromDomain
 
+	_, err = p.store.NewRecord(nDomain)
+	if err != nil {
+		respondWithError(w, http.StatusNoContent, "error saving log domain")
+		return
+	}
+
 	// reasignar el attributo previoGradeSSL
 	argIni := storage.TransferTxParamsInitialize{
 		FromDomain: nDomain,
@@ -68,6 +74,12 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 	result2, err := p.store.TransferTxInitialize(ctx, argIni)
 	if err != nil {
 		respondWithError(w, http.StatusNoContent, "error in create a server of the domain")
+		return
+	}
+
+	_, err = p.store.NewRecord(nDomain)
+	if err != nil {
+		respondWithError(w, http.StatusNoContent, "error saving log domain")
 		return
 	}
 
@@ -88,7 +100,9 @@ func (p *HandlerRequest) GetLastDomains(w http.ResponseWriter, r *http.Request) 
 	}
 
 	mapl := p.store.GetLastDomain()
-	respondwithJSON(w, http.StatusAccepted, mapl)
+	parseResponse := parseListJSON(mapl)
+
+	respondwithJSON(w, http.StatusAccepted, parseResponse)
 }
 
 // respondwithJSON write json response format

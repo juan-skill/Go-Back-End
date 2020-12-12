@@ -19,8 +19,8 @@
             </v-list-item>
 
             <v-list-item>
-              <v-list-item-title :to="{ name: 'about' }">
-                <RouterLink :to="{ name: 'About' }">last recors</RouterLink>
+              <v-list-item-title>
+                <RouterLink :to="{ name: 'Domains' }">Last records</RouterLink>
               </v-list-item-title>
             </v-list-item>
           </v-list-item-group>

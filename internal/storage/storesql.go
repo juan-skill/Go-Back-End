@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/other_project/crockroach/internal/logs"
 	"github.com/other_project/crockroach/models"
@@ -264,7 +263,7 @@ func (store *Store) TransferTxServerChange(ctx context.Context, arg TransferTxPa
 		}
 
 		lastRecord := result.ConsultTable[len(result.ConsultTable)-1]
-		fmt.Println("lastrecord --> ", lastRecord)
+		//fmt.Println("lastrecord --> ", lastRecord)
 
 		serverChanged := false
 

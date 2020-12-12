@@ -27,7 +27,7 @@ type DBTX interface {
 	GetRecordByName(domain *models.Domain) (objects []*models.Domain, err error)
 	NewRecord(domain *models.Domain) (*models.LogDomainStatus, error)
 	ReloadRecord(ctx context.Context) (myObjects map[string]*models.LogDomainStatus, err error)
-	GetLastDomain() map[string]*models.Domain
+	GetLastDomain() []*models.Domain
 
 	/*
 		ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
@@ -122,7 +122,7 @@ func ReloadRecord(ctx context.Context) (myObjects map[string]*models.LogDomainSt
 	return Default.ReloadRecord(ctx)
 }
 
-func GetLastDomain() map[string]*models.Domain {
+func GetLastDomain() []*models.Domain {
 	return Default.GetLastDomain()
 }
 

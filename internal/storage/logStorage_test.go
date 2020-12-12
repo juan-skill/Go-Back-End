@@ -108,7 +108,7 @@ func getDomain1(t *testing.T) *models.Domain {
 		c.NoError(erro)
 		c.NotNil(server)
 		fmt.Println()
-		fmt.Println(server)
+		//fmt.Println(server)
 		fmt.Println()
 		domain.Servers = append(domain.Servers, server)
 	}
@@ -129,7 +129,7 @@ func getDomain1(t *testing.T) *models.Domain {
 	}
 
 	fmt.Println()
-	fmt.Println(domain)
+	//fmt.Println(domain)
 	fmt.Println()
 
 	return domain
@@ -163,7 +163,7 @@ func TestGetRecordByName(t *testing.T) {
 		domains = append(domains, domain)
 	}
 
-	fmt.Println(domains[0].DomainName)
+	//fmt.Println(domains[0].DomainName)
 	records, err := GetRecordByName(domains[0])
 	c.NoError(err)
 	c.NotEmpty(records)
@@ -198,14 +198,17 @@ func TestGetLastDomain(t *testing.T) {
 		c.NoError(err)
 		c.NotEmpty(record)
 
+		fmt.Println("dominio log guardado y añadiendo a la lista ", record.Domain)
 		domains = append(domains, domain)
 	}
 
-	fmt.Println(domains[0].DomainName)
+	//fmt.Println(domains[0].DomainName)
 	records, err := GetRecordByName(domains[0])
 	c.NoError(err)
 	c.NotEmpty(records)
 
 	recordsList := GetLastDomain()
 	c.NotEmpty(recordsList)
+
+	fmt.Println("get last record ", recordsList)
 }

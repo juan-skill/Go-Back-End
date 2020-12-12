@@ -388,3 +388,15 @@ func parseJSON(domain *models.Domain) *ParseDomainJSON {
 
 	return parseDomain
 }
+
+// parseListJSON parse the data to return to the API
+func parseListJSON(domains []*models.Domain) []*ParseDomainJSON {
+	objects := []*ParseDomainJSON{}
+
+	for i := 0; i < len(domains); i++ {
+		parseDomain := parseJSON(domains[i])
+		objects = append(objects, parseDomain)
+	}
+
+	return objects
+}

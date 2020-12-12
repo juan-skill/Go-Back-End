@@ -4,24 +4,15 @@
       <v-layout>
         <v-flex>
           <v-card class="mb-3 pa-3">
-            <form md-9 row @submit.prevent="getDomain(domainName)">
-              <v-text-field
-                column
-                md-6
-                label="Domain name"
-                outlined
-                v-model="domainName"
-              ></v-text-field>
-              <v-btn column md-9 outlined color="indigo" type="submit">
-                Submit
-              </v-btn>
-            </form>
+            <v-btn column md-9 outlined color="indigo" @click="getDomains()">
+              Show last domains
+            </v-btn>
           </v-card>
         </v-flex>
       </v-layout>
     </v-container>
 
-    <p v-if="submitting">Submitting...</p>
+    <p v-if="loading">Loading...</p>
     <v-card class="mx-auto">
       <v-list>
         <v-list-group
@@ -52,11 +43,7 @@
               </v-list-item-content>
             </template>
 
-            <v-list-item
-              v-for="domain in domains"
-              :key="domain.domainName"
-              link
-            >
+            <v-list-item link>
               <v-list-item-title
                 v-text="domain.servers_changed"
               ></v-list-item-title>
@@ -70,12 +57,22 @@
               </v-list-item-content>
             </template>
 
-            <v-list-item
-              v-for="domain in domains"
-              :key="domain.domainName"
-              link
-            >
+            <v-list-item link>
               <v-list-item-title v-text="domain.ssl_grade"></v-list-item-title>
+            </v-list-item>
+          </v-list-group>
+
+          <v-list-group no-action sub-group>
+            <template v-slot:activator>
+              <v-list-item-content>
+                <v-list-item-title>Previous SSL Grade</v-list-item-title>
+              </v-list-item-content>
+            </template>
+
+            <v-list-item link>
+              <v-list-item-title
+                v-text="domain.previous_ssl_grade"
+              ></v-list-item-title>
             </v-list-item>
           </v-list-group>
 
@@ -86,11 +83,7 @@
               </v-list-item-content>
             </template>
 
-            <v-list-item
-              v-for="domain in domains"
-              :key="domain.domainName"
-              link
-            >
+            <v-list-item link>
               <v-list-item-title v-text="domain.logo"></v-list-item-title>
             </v-list-item>
           </v-list-group>
@@ -102,11 +95,7 @@
               </v-list-item-content>
             </template>
 
-            <v-list-item
-              v-for="domain in domains"
-              :key="domain.domainName"
-              link
-            >
+            <v-list-item link>
               <v-list-item-title v-text="domain.is_down"></v-list-item-title>
             </v-list-item>
           </v-list-group>
@@ -125,10 +114,10 @@ export default {
     };
   },
   computed: {
-    ...mapState(["domains", "submitting"])
+    ...mapState(["domains", "loading"])
   },
   methods: {
-    ...mapActions(["getDomain"])
+    ...mapActions(["getDomains"])
   }
 };
 </script>

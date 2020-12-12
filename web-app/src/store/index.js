@@ -10,28 +10,10 @@ export default new Vuex.Store({
     loading: false,
     submitting: false,
     domains: []
-    /*
-    servers: {
-      address: "",
-      country: "",
-      owner: "",
-      ssl_grade: ""
-    },
-    domain: {
-      servers: [],
-      servers_changed: "",
-      ssl_grade: undefined,
-      logo: "",
-      title: "",
-      is_down: undefined
-    }
-    */
   },
   mutations: {
     setDomain(state, payload) {
       state.domain = payload;
-      //state.domain.ssl_grade = payload.ssl_grade;
-      //console.info(state.domain.ssl_grade)
     },
     setDomains(state, payload) {
       state.domains.push(payload);
@@ -41,6 +23,9 @@ export default new Vuex.Store({
     },
     setSubmit(state, payload) {
       state.submitting = payload;
+    },
+    setLoading(state, payload) {
+      state.loading = payload;
     }
   },
   actions: {
@@ -81,6 +66,25 @@ export default new Vuex.Store({
         */
         //commit("setDomain", response.data);
         commit("setDomains", response.data);
+      } catch (error) {
+        console.warn(error);
+      }
+    },
+    async getDomains({ commit }) {
+      try {
+        commit("setLoading", true);
+        commit("setResetDomains", []);
+        const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+        await pause(400);
+
+        const response = await axios.get(
+          "http://localhost:8090/get-last-domains"
+        );
+        commit("setLoading", false);
+
+        console.info(response.data);
+
+        commit("setResetDomains", response.data);
       } catch (error) {
         console.warn(error);
       }
