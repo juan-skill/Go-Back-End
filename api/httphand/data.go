@@ -162,7 +162,7 @@ func GetStatusServer(domainName string) (bool, error) {
 	resp, err := client.Do(request)
 	if err != nil {
 		logs.Log().Errorf("Error check status server %s ", err.Error())
-		return true, err
+		return false, err
 	}
 
 	defer func() {

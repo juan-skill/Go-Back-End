@@ -22,106 +22,65 @@
     </v-container>
 
     <p v-if="submitting">Submitting...</p>
-    <v-card class="mx-auto">
+    <v-card v-if="showInfo" class="mx-auto">
       <v-list>
-        <v-list-group
-          v-for="domain in domains"
-          :key="domain.domainName"
-          :value="true"
-          prepend-icon="mdi-account-circle"
-        >
+        <v-list-group prepend-icon="mdi-account-circle">
           <template v-slot:activator>
-            <v-list-item-title v-text="domain.domainName"></v-list-item-title>
+            <v-list-item-content>
+              <v-list-item-title>Domain</v-list-item-title>
+            </v-list-item-content>
           </template>
 
-          <v-list-group :value="true" no-action sub-group>
+          <v-list-item
+            v-for="(value, name) in domain"
+            :key="name.ssl_grade"
+            link
+          >
+            <v-list-item-title
+              v-if="name != 'servers'"
+              v-text="name"
+            ></v-list-item-title>
+            <v-list-item-subtitle
+              v-if="name != 'servers'"
+              v-text="value"
+            ></v-list-item-subtitle>
+          </v-list-item>
+          <!-- v-if="name != 'servers'" -->
+
+          <!-- <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title>{{ name }}</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          <v-list-item link>
+            <v-list-item-title v-text="value"></v-list-item-title>
+        
+          </v-list-item>-->
+        </v-list-group>
+      </v-list>
+
+      <v-list>
+        <v-list-group no-action sub-group>
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title>servers</v-list-item-title>
+            </v-list-item-content>
+          </template>
+
+          <v-list-group
+            v-for="(val, nam) in domain.servers"
+            :key="nam.address"
+            prepend-icon="mdi-account-circle"
+          >
             <template v-slot:activator>
               <v-list-item-content>
-                <v-list-item-title>Title</v-list-item-title>
-              </v-list-item-content>
-            </template>
-            <v-list-item link>
-              <v-list-item-title v-text="domain.title"></v-list-item-title>
-            </v-list-item>
-          </v-list-group>
-
-          <v-list-group no-action sub-group>
-            <template v-slot:activator>
-              <v-list-item-content>
-                <v-list-item-title>Server Changed</v-list-item-title>
-              </v-list-item-content>
-            </template>
-
-            <v-list-item
-              v-for="domain in domains"
-              :key="domain.domainName"
-              link
-            >
-              <v-list-item-title
-                v-text="domain.servers_changed"
-              ></v-list-item-title>
-            </v-list-item>
-          </v-list-group>
-
-          <v-list-group no-action sub-group>
-            <template v-slot:activator>
-              <v-list-item-content>
-                <v-list-item-title>SSL Grade</v-list-item-title>
-              </v-list-item-content>
-            </template>
-
-            <v-list-item
-              v-for="domain in domains"
-              :key="domain.domainName"
-              link
-            >
-              <v-list-item-title v-text="domain.ssl_grade"></v-list-item-title>
-            </v-list-item>
-          </v-list-group>
-
-          <v-list-group no-action sub-group>
-            <template v-slot:activator>
-              <v-list-item-content>
-                <v-list-item-title>Previous SSL Grade</v-list-item-title>
+                <v-list-item-title>Server {{ nam }}</v-list-item-title>
               </v-list-item-content>
             </template>
 
-            <v-list-item link>
-              <v-list-item-title
-                v-text="domain.previous_ssl_grade"
-              ></v-list-item-title>
-            </v-list-item>
-          </v-list-group>
-
-          <v-list-group no-action sub-group>
-            <template v-slot:activator>
-              <v-list-item-content>
-                <v-list-item-title>Logo</v-list-item-title>
-              </v-list-item-content>
-            </template>
-
-            <v-list-item
-              v-for="domain in domains"
-              :key="domain.domainName"
-              link
-            >
-              <v-list-item-title v-text="domain.logo"></v-list-item-title>
-            </v-list-item>
-          </v-list-group>
-
-          <v-list-group no-action sub-group>
-            <template v-slot:activator>
-              <v-list-item-content>
-                <v-list-item-title>Is Down?</v-list-item-title>
-              </v-list-item-content>
-            </template>
-
-            <v-list-item
-              v-for="domain in domains"
-              :key="domain.domainName"
-              link
-            >
-              <v-list-item-title v-text="domain.is_down"></v-list-item-title>
+            <v-list-item v-for="(val, nam) in val" :key="nam.address" link>
+              <v-list-item-title v-text="nam"></v-list-item-title>
+              <v-list-item-subtitle v-text="val"></v-list-item-subtitle>
             </v-list-item>
           </v-list-group>
         </v-list-group>
@@ -139,7 +98,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["domains", "submitting"])
+    ...mapState(["domain", "submitting", "showInfo"])
   },
   methods: {
     ...mapActions(["getDomain"])

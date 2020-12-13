@@ -37,13 +37,13 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 
 	_, err := p.store.ReloadRecord(ctx)
 	if err != nil {
-		respondWithError(w, http.StatusBadGateway, "can't reload the last domains")
+		respondWithError(w, http.StatusInternalServerError, "can't reload the last domains")
 		return
 	}
 
 	domain, err := ProcessData(ctx, domainName)
 	if err != nil {
-		respondWithError(w, http.StatusBadGateway, "can't create the domain")
+		respondWithError(w, http.StatusConflict, "can't create the domain")
 		return
 	}
 
@@ -54,7 +54,7 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 
 	result1, err := p.store.TransferTxServers(r.Context(), argPre)
 	if err != nil {
-		respondWithError(w, http.StatusNoContent, "error in create a server of the domain")
+		respondWithError(w, http.StatusConflict, "error in create a server of the domain")
 		return
 	}
 
@@ -62,7 +62,7 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 
 	_, err = p.store.NewRecord(nDomain)
 	if err != nil {
-		respondWithError(w, http.StatusNoContent, "error saving log domain")
+		respondWithError(w, http.StatusConflict, "error saving log domain")
 		return
 	}
 
@@ -73,13 +73,13 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 
 	result2, err := p.store.TransferTxInitialize(ctx, argIni)
 	if err != nil {
-		respondWithError(w, http.StatusNoContent, "error in create a server of the domain")
+		respondWithError(w, http.StatusConflict, "error in create a server of the domain")
 		return
 	}
 
 	_, err = p.store.NewRecord(nDomain)
 	if err != nil {
-		respondWithError(w, http.StatusNoContent, "error saving log domain")
+		respondWithError(w, http.StatusConflict, "error saving log domain")
 		return
 	}
 
@@ -95,14 +95,14 @@ func (p *HandlerRequest) GetLastDomains(w http.ResponseWriter, r *http.Request) 
 
 	_, err := p.store.ReloadRecord(ctx)
 	if err != nil {
-		respondWithError(w, http.StatusBadGateway, "can't reload the last domains")
+		respondWithError(w, http.StatusInternalServerError, "can't reload the last domains")
 		return
 	}
 
 	mapl := p.store.GetLastDomain()
 	parseResponse := parseListJSON(mapl)
 
-	respondwithJSON(w, http.StatusAccepted, parseResponse)
+	respondwithJSON(w, http.StatusOK, parseResponse)
 }
 
 // respondwithJSON write json response format
@@ -110,6 +110,7 @@ func respondwithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, err := json.Marshal(payload)
 	if err != nil {
 		logs.Log().Errorf("Error Marshal response ", err.Error())
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -118,6 +119,7 @@ func respondwithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	_, err = w.Write(response)
 	if err != nil {
 		logs.Log().Errorf("Error Write response %s", err.Error())
+		return
 	}
 }
 
