@@ -45,17 +45,6 @@
               v-text="value"
             ></v-list-item-subtitle>
           </v-list-item>
-          <!-- v-if="name != 'servers'" -->
-
-          <!-- <template v-slot:activator>
-            <v-list-item-content>
-              <v-list-item-title>{{ name }}</v-list-item-title>
-            </v-list-item-content>
-          </template>
-          <v-list-item link>
-            <v-list-item-title v-text="value"></v-list-item-title>
-        
-          </v-list-item>-->
         </v-list-group>
       </v-list>
 

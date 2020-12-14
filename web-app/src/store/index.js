@@ -42,6 +42,7 @@ export default new Vuex.Store({
       }
     },
     setDomains(state, payload) {
+      state.domains = [];
       state.domains.push(payload);
     },
     setResetDomains(state, payload) {
@@ -74,47 +75,41 @@ export default new Vuex.Store({
       commit("setSubmit", true);
       commit("setShowInfo", false);
 
-      if (domainName  == "") {
+      if (domainName == "") {
         const err = {
           message: "cannot be empty domain name",
           active: true
         };
-        commit("setMessageError", err);        
+        commit("setMessageError", err);
         commit("setSubmit", false);
       } else {
-
         try {
+          const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+          await pause(1500);
 
-        const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-        await pause(1500);
+          const bodyRequest = { domainName: domainName };
+          const headersRequest = { "Content-type": "application/json" };
+          const response = await axios.post(
+            "http://localhost:8090/domain",
+            bodyRequest,
+            { headersRequest }
+          );
 
-        const bodyRequest = { domainName: domainName };
-        const headersRequest = { "Content-type": "application/json" };
-        const response = await axios.post(
-          "http://localhost:8090/domain",
-          bodyRequest,
-          { headersRequest }
-        );
-
-        console.info(response);
-        
-
-        if (response.statusText == "Created") {
-          console.info(response.status);
-          commit("setDomain", response.data);
-          commit("setShowInfo", true);
+          if (response.statusText == "Created") {
+            commit("setDomain", response.data);
+            commit("setShowInfo", true);
+          }
+          commit("setSubmit", false);
+        } catch (error) {
+          commit("setSubmit", false);
+          const err = {
+            message: "try again in minutes",
+            active: true
+          };
+          commit("setMessageError", err);
+          console.warn(error);
         }
-        commit("setSubmit", false);
-      } catch (error) {
-        commit("setSubmit", false);
-        const err = {
-          message: "try again in minutes",
-          active: true
-        };
-        commit("setMessageError", err);
-        console.warn(error);
       }
-    }
     },
     async getDomains({ commit }) {
       try {
@@ -129,9 +124,6 @@ export default new Vuex.Store({
         );
         commit("setLoading", false);
 
-        console.info(response.data);
-        console.info(response.statusText);
-        //if (response.statusText == "OK") {
         if (response.statusText == "OK") {
           commit("setDomains", response.data);
           commit("setShowInfo", true);
