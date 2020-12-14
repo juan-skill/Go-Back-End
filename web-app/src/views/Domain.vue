@@ -86,6 +86,11 @@
         </v-list-group>
       </v-list>
     </v-card>
+    <v-dialog width="500" v-model="messageError.active">
+      <v-card>
+        <v-card-text> {{ messageError.message }} </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -98,7 +103,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["domain", "submitting", "showInfo"])
+    ...mapState(["domain", "submitting", "showInfo", "messageError"])
   },
   methods: {
     ...mapActions(["getDomain"])

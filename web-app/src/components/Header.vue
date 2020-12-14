@@ -7,24 +7,25 @@
 
     <v-navigation-drawer v-model="drawer" absolute bottom temporary dark>
       <v-layout mt-4 column align-center>
-        <v-list nav dense>
-          <v-list-item-group
-            v-model="group"
-            active-class="deep-purple--text text--accent-4"
-          >
-            <v-list-item>
-              <v-list-item-title>
-                <RouterLink :to="{ name: 'Domain' }">Test domain</RouterLink>
-              </v-list-item-title>
-            </v-list-item>
+        <v-list dense>
+      <v-subheader>Links</v-subheader>
+      <v-list-item-group>
+        
+        <v-list-item
+          v-for="(item, i) in items"
+          :key="i"
+          router :to="item.route"
+        >
+                  <v-list-item-icon>
+            <v-icon v-text="item.icon"></v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title v-text="item.text"></v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>        
 
-            <v-list-item>
-              <v-list-item-title>
-                <RouterLink :to="{ name: 'Domains' }">Last records</RouterLink>
-              </v-list-item-title>
-            </v-list-item>
-          </v-list-item-group>
-        </v-list>
+      </v-list-item-group>
+    </v-list>
       </v-layout>
     </v-navigation-drawer>
   </div>
@@ -35,7 +36,11 @@ export default {
   name: "Header",
   data: () => ({
     drawer: false,
-    group: null
+    group: null,
+    items: [
+        { text: 'Test domain', icon: 'mdi-clock', route: '/domain' },
+        { text: 'Last records', icon: 'mdi-account', route: '/domains' },
+      ],
   }),
 
   watch: {

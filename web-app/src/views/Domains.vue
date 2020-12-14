@@ -38,8 +38,8 @@
             <v-list-group
               no-action
               sub-group
-              v-for="(value, name) in domain"
-              :key="value.tile"
+              v-for="(value, name, index) in domain"
+              v-bind:key="index"
             >
               <template v-slot:activator>
                 <v-list-item-content>
@@ -62,6 +62,11 @@
         </v-list-group>
       </v-list>
     </v-card>
+    <v-dialog width="500" v-model="messageError.active">
+      <v-card>
+        <v-card-text> {{ messageError.message }} </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -74,7 +79,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["domains", "loading", "showInfo"])
+    ...mapState(["domains", "loading", "showInfo", "messageError"])
   },
   methods: {
     ...mapActions(["getDomains"])

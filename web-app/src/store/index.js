@@ -18,7 +18,11 @@ export default new Vuex.Store({
     loading: false,
     submitting: false,
     showInfo: false,
-    domains: []
+    domains: [],
+    messageError: {
+      message: "",
+      active: false
+    }
   },
   mutations: {
     setDomain(state, payload) {
@@ -59,13 +63,28 @@ export default new Vuex.Store({
     },
     setShowInfo(state, payload) {
       state.showInfo = payload;
+    },
+    setMessageError(state, payload) {
+      state.messageError.message = payload.message;
+      state.messageError.active = payload.active;
     }
   },
   actions: {
     async getDomain({ commit }, domainName) {
-      try {
-        commit("setSubmit", true);
-        commit("setShowInfo", false);
+      commit("setSubmit", true);
+      commit("setShowInfo", false);
+
+      if (domainName  == "") {
+        const err = {
+          message: "cannot be empty domain name",
+          active: true
+        };
+        commit("setMessageError", err);        
+        commit("setSubmit", false);
+      } else {
+
+        try {
+
         const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
         await pause(1500);
 
@@ -78,17 +97,24 @@ export default new Vuex.Store({
         );
 
         console.info(response);
-        console.info(response.status);
+        
 
         if (response.statusText == "Created") {
+          console.info(response.status);
           commit("setDomain", response.data);
           commit("setShowInfo", true);
         }
         commit("setSubmit", false);
       } catch (error) {
         commit("setSubmit", false);
+        const err = {
+          message: "try again in minutes",
+          active: true
+        };
+        commit("setMessageError", err);
         console.warn(error);
       }
+    }
     },
     async getDomains({ commit }) {
       try {
@@ -113,6 +139,11 @@ export default new Vuex.Store({
         commit("setLoading", false);
       } catch (error) {
         commit("setLoading", false);
+        const err = {
+          message: "try again in minutes",
+          active: true
+        };
+        commit("setMessageError", err);
         console.warn(error);
       }
     }
