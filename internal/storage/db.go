@@ -122,6 +122,7 @@ func ReloadRecord(ctx context.Context) (myObjects map[string]*models.LogDomainSt
 	return Default.ReloadRecord(ctx)
 }
 
+// GetLastDomain function will return a list with the last records
 func GetLastDomain() []*models.Domain {
 	return Default.GetLastDomain()
 }

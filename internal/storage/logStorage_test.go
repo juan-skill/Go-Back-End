@@ -107,9 +107,7 @@ func getDomain1(t *testing.T) *models.Domain {
 		server, erro := models.NewServer("server1", testrandom.RandomSSLRating(""), "US", "Amazon.com, Inc.", domain)
 		c.NoError(erro)
 		c.NotNil(server)
-		fmt.Println()
-		//fmt.Println(server)
-		fmt.Println()
+
 		domain.Servers = append(domain.Servers, server)
 	}
 
@@ -127,10 +125,6 @@ func getDomain1(t *testing.T) *models.Domain {
 		_, erro := StoreServer(ctx, server, domain)
 		c.NoError(erro)
 	}
-
-	fmt.Println()
-	//fmt.Println(domain)
-	fmt.Println()
 
 	return domain
 }
@@ -156,8 +150,8 @@ func TestGetRecordByName(t *testing.T) {
 		domain := getDomain1(t)
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		record, err := NewRecord(domain)
-		c.NoError(err)
+		record, erro := NewRecord(domain)
+		c.NoError(erro)
 		c.NotEmpty(record)
 
 		domains = append(domains, domain)
@@ -194,11 +188,10 @@ func TestGetLastDomain(t *testing.T) {
 		domain := getDomain1(t)
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		record, err := NewRecord(domain)
-		c.NoError(err)
+		record, erro := NewRecord(domain)
+		c.NoError(erro)
 		c.NotEmpty(record)
 
-		fmt.Println("dominio log guardado y añadiendo a la lista ", record.Domain)
 		domains = append(domains, domain)
 	}
 

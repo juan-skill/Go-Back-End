@@ -88,9 +88,9 @@ func (p *HandlerRequest) Create(w http.ResponseWriter, r *http.Request) {
 	respondwithJSON(w, http.StatusCreated, parseResponse)
 }
 
-// GetLastDomains get the last records
-func (p *HandlerRequest) GetLastDomains(w http.ResponseWriter, r *http.Request) {
-	ctx, cancelfunc := context.WithTimeout(r.Context(), 10*time.Second)
+// RequestLastDomains get the last records
+func (p *HandlerRequest) RequestLastDomains(w http.ResponseWriter, r *http.Request) {
+	ctx, cancelfunc := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancelfunc()
 
 	_, err := p.store.ReloadRecord(ctx)
@@ -132,7 +132,6 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 func parseRequest(r *http.Request, w http.ResponseWriter) string {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		logs.Log().Errorf("cannot ReadAll body request: %s ", err.Error())
 		respondWithError(w, http.StatusBadRequest, "can't read body")
 		return ""
 	}

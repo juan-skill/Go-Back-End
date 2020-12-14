@@ -83,35 +83,38 @@ const (
 var (
 	// ErrEmptyDomainName when check the status server
 	ErrEmptyDomainName = errors.New("cannot be empty domain name")
+	// ErrInvalidServers when search info servers
+	ErrInvalidServers = errors.New("cannot extract data about the servers")
+	// ErrWithoutAnwserSSLLabs when search
+	ErrWithoutAnwserSSLLabs = errors.New("cannot obtain  answser SSL labs info")
+	// ErrDomainConsulted when search the domain
+	ErrDomainConsulted = errors.New("cannot obtain answer the domain")
 )
 
 // ProcessData to build the domain object
 func ProcessData(ctx context.Context, domainName string) (*models.Domain, error) {
 	isDown, err := GetStatusServer(domainName)
 	if err != nil {
-		logs.Log().Errorf("Error isDown %s", err.Error())
+		//logs.Log().Errorf("Error isDown %s", err.Error())
 		return nil, err
 	}
 
 	infoPage, err := GetInfoDomainPage(domainName)
 	if err != nil {
-		logs.Log().Errorf("Error infoPage %s", err.Error())
+		//logs.Log().Errorf("Error infoPage %s", err.Error())
 		return nil, err
 	}
 
 	domain, err := models.NewDomain(false, isDown, domainName, "", "", infoPage.Logo, infoPage.Title)
 	if err != nil {
-		logs.Log().Errorf("cannot create the domain %s", err.Error())
+		//logs.Log().Errorf("cannot create the domain %s", err.Error())
 		return nil, err
 	}
 
 	infoDomainSSL, err := InfoServers(domainName)
 	if err != nil {
-		logs.Log().Errorf("cannot extract info the domain %s", err.Error())
 		return nil, err
 	}
-
-	fmt.Println("struct 2 ", infoDomainSSL)
 
 	servers := infoDomainSSL.Endpoints
 
@@ -122,16 +125,13 @@ func ProcessData(ctx context.Context, domainName string) (*models.Domain, error)
 
 		infoWhois, err := getInfoWhois(serverSSL.IPAddress)
 		if err != nil {
-			logs.Log().Errorf("cannot extract Country whois command: %s", err.Error())
+			//logs.Log().Errorf("cannot extract Country whois command: %s", err.Error())
 			return nil, err
 		}
 
-		fmt.Printf(`key2: %s, value2: %s`, "country", infoWhois.country)
-		fmt.Printf(`key2: %s, value2: %s`, "owner", infoWhois.owner)
-
 		server, err := models.NewServer(serverSSL.IPAddress, serverSSL.Grade, infoWhois.country, infoWhois.owner, domain)
 		if err != nil {
-			logs.Log().Errorf("cannot create the server of the domain %s", err.Error())
+			//logs.Log().Errorf("cannot create the server of the domain %s", err.Error())
 			return nil, err
 		}
 
@@ -184,6 +184,7 @@ func GetStatusServer(domainName string) (bool, error) {
 // GetInfoDomainPage ...
 func GetInfoDomainPage(domainName string) (*InfoDomainPage, error) {
 	if domainName == "" {
+		logs.Log().Errorf("missing domain name %s ", ErrEmptyDomainName)
 		return nil, ErrEmptyDomainName
 	}
 
@@ -212,6 +213,12 @@ func GetInfoDomainPage(domainName string) (*InfoDomainPage, error) {
 		}
 	}()
 
+	statusRequest := fmt.Sprintf("%d OK", http.StatusOK)
+	if resp.Status != statusRequest {
+		logs.Log().Errorf("the dominio %s does not work: statuscode %d\n", resp.Request.URL, resp.StatusCode)
+		return nil, ErrDomainConsulted
+	}
+
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		logs.Log().Errorf("Error read document HTML %s ", err.Error())
@@ -227,14 +234,14 @@ func GetInfoDomainPage(domainName string) (*InfoDomainPage, error) {
 	doc.Find("link").Each(func(i int, s *goquery.Selection) {
 		rel, err := s.Attr("rel")
 		if !err {
-			logs.Log().Errorf("Not found rel attribute HTML %s ", err)
+			logs.Log().Errorf("Not found rel attribute HTML %v ", err)
 			return
 		}
 
 		if rel == "shortcut icon" {
 			iconPath, err = s.Attr("href")
 			if !err {
-				logs.Log().Errorf("Not found href attribute HTML %s ", err)
+				logs.Log().Errorf("Not found href attribute HTML %v ", err)
 				return
 			}
 		}
@@ -305,6 +312,20 @@ func InfoServers(domain string) (*InfoLabSSL, error) {
 		return nil, err
 	}
 
+	//var result map[string]map[string]string
+	var resultSSL map[string]interface{}
+
+	err = json.Unmarshal(body, &resultSSL)
+	if err != nil {
+		logs.Log().Errorf("Error unmarshal infoDomainSSL %s ", err.Error())
+		return nil, err
+	}
+
+	if resultSSL["errors"] != nil {
+		logs.Log().Errorf("Error unmarshal infoDomainSSL %s ", resultSSL["errors"])
+		return nil, ErrWithoutAnwserSSLLabs
+	}
+
 	var infoDomainSSL InfoLabSSL
 
 	err = json.Unmarshal(body, &infoDomainSSL)
@@ -313,7 +334,12 @@ func InfoServers(domain string) (*InfoLabSSL, error) {
 		return nil, err
 	}
 
-	fmt.Println("struct 1", infoDomainSSL)
+	fmt.Println("struct 1 info ssl-labs: ", infoDomainSSL)
+
+	if infoDomainSSL.Endpoints == nil {
+		logs.Log().Errorf("cannot found info servers %s", ErrInvalidServers.Error())
+		return nil, ErrInvalidServers
+	}
 
 	return &infoDomainSSL, nil
 }
@@ -353,9 +379,6 @@ func getInfoWhois(ipAddress string) (*InfoWHOISCommand, error) {
 
 	infoWhois.owner = string(value)
 
-	fmt.Printf(`key1: %s, value1: %s`, "country", infoWhois.country)
-	fmt.Printf(`key1: %s, value1: %s`, "owner", infoWhois.owner)
-
 	return infoWhois, nil
 }
 
@@ -364,7 +387,6 @@ func parseJSON(domain *models.Domain) *ParseDomainJSON {
 	parseDomain := new(ParseDomainJSON)
 
 	serversNumber := len(domain.Servers)
-	fmt.Println(serversNumber)
 
 	if len(domain.Servers) == 0 {
 		return nil
