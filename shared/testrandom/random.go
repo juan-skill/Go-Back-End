@@ -61,6 +61,16 @@ func RandomSSLRating(rate string) string {
 	return RandomSSLRating(rate)
 }
 
+// RandomNameDomain generates a random domain name
+func RandomNameDomain() string {
+	nameDomains := []string{"Amazon.com", "Google.com", "Netflix.com", "Rappi.com"}
+	n := len(nameDomains)
+
+	number, _ := RandomInt(0, int64(n-1))
+
+	return nameDomains[number]
+}
+
 // RandomServerNumber generates a random number of servers
 func RandomServerNumber() int64 {
 	number, err := RandomInt(1, 4)

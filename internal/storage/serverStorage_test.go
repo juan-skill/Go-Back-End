@@ -177,7 +177,7 @@ func storeServerTest(t *testing.T) *models.Server {
 		c.NoError(err)
 		c.NotNil(server)
 
-		server1, err := StoreServer(ctx, server)
+		server1, err := StoreServer(ctx, server, domain)
 		c.NoError(err)
 		c.NotEmpty(server1)
 
@@ -204,12 +204,12 @@ func TestStoreServerFailure(t *testing.T) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	server, err := StoreServer(ctx, nil)
+	server, err := StoreServer(ctx, nil, nil)
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrInvalidServer, err.Error())
 
-	server, err = StoreServer(ctx, server)
+	server, err = StoreServer(ctx, server, nil)
 	c.Error(err)
 	c.Nil(server)
 	c.EqualError(ErrInvalidServer, err.Error())
@@ -388,7 +388,7 @@ func BenchmarkStoreServer(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		_, err = StoreServer(ctx, server)
+		_, err = StoreServer(ctx, server, domain)
 		if err != nil {
 			b.Fatal(err)
 		}

@@ -89,22 +89,37 @@ var (
 )
 
 // StoreServer function will store a server struct
-func (q *Queries) StoreServer(ctx context.Context, server *models.Server) (*models.Server, error) {
+func (q *Queries) StoreServer(ctx context.Context, server *models.Server, domain *models.Domain) (*models.Server, error) {
+	tx, err := CockroachClient.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+
+		err = tx.Commit()
+	}()
+
 	if server == nil {
 		logs.Log().Errorf("cannot store server in database %s ", ErrInvalidServer.Error())
 		return nil, ErrInvalidServer
 	}
 
-	row := CockroachClient.QueryRowContext(ctx, createServer, server.ServerID, server.Address, server.SSLGrade, server.Country, server.Owner, server.Domain.DomainID, server.CreationDate, server.UpdateDate)
+	row := tx.QueryRowContext(ctx, createServer, server.ServerID, server.Address, server.SSLGrade, server.Country, server.Owner, server.Domain.DomainID, server.CreationDate, server.UpdateDate)
 	if row.Err() != nil {
 		logs.Log().Errorf("Query error %s", row.Err())
 		return nil, ErrInvalidQuery
 	}
 
 	item := new(models.Server)
-	item.Domain = new(models.Domain)
+	//item.Domain = new(models.Domain)
+	item.Domain = domain
 
-	err := row.Scan(
+	err = row.Scan(
 		&item.ServerID,
 		&item.Address,
 		&item.SSLGrade,
@@ -114,13 +129,13 @@ func (q *Queries) StoreServer(ctx context.Context, server *models.Server) (*mode
 		&item.CreationDate,
 		&item.UpdateDate)
 	if err != nil {
-		logs.Log().Errorf("Scan error %s", err.Error())
+		logs.Log().Errorf("Scan error: %s", err.Error())
 		return nil, ErrScanRow
 	}
 
-	if item.Domain.DomainID == server.Domain.DomainID {
+	/*if item.Domain.DomainID == server.Domain.DomainID {
 		item.Domain = server.Domain
-	}
+	}*/
 
 	return item, nil
 }

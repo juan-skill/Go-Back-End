@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/other_project/crockroach/internal/logs"
 	"github.com/other_project/crockroach/models"
 )
 
@@ -22,16 +23,29 @@ func (q *Queries) GetRecordByName(domain *models.Domain) (records []*models.Doma
 	recordByIds := []*models.Domain{}
 
 	for _, value := range Objects {
-		if domain.DomainID == value.Domain.DomainID {
+		if domain.DomainName == value.Domain.DomainName {
 			recordByIds = append(recordByIds, value.Domain)
 		}
 	}
 
-	for i := 0; i < len(recordByIds); i++ {
-		fmt.Println("getrecordbyname --> ", recordByIds[i])
+	return recordByIds, nil
+}
+
+// GetLastDomain list the last domains consulted
+func (q *Queries) GetLastDomain() []*models.Domain {
+	myObjects := make(map[string]*models.Domain)
+
+	for _, value := range Objects {
+		myObjects[value.DomainName] = value.Domain
 	}
 
-	return recordByIds, nil
+	objects := []*models.Domain{}
+
+	for _, value := range myObjects {
+		objects = append(objects, value)
+	}
+
+	return objects
 }
 
 // NewRecord creates a new record about of last record/changes
@@ -42,7 +56,7 @@ func (q *Queries) NewRecord(domain *models.Domain) (*models.LogDomainStatus, err
 
 	logDomain, err := models.NewLogDomainStatus(domain.DomainName, domain.SSLGrade, domain)
 	if err != nil {
-		fmt.Println(err)
+		logs.Log().Errorf("cannot create new log domain %s: ", err.Error())
 		return nil, err
 	}
 
@@ -58,7 +72,7 @@ func (q *Queries) ReloadRecord(ctx context.Context) (myObjects map[string]*model
 		return nil, err
 	}
 
-	fmt.Println("reload ", len(domains))
+	//fmt.Println("reload ", len(domains))
 
 	for domain := range domains {
 		_, err := NewRecord(&domains[domain])
@@ -67,7 +81,7 @@ func (q *Queries) ReloadRecord(ctx context.Context) (myObjects map[string]*model
 		}
 	}
 
-	fmt.Println(Objects)
+	//fmt.Println(Objects)
 
 	return Objects, nil
 }

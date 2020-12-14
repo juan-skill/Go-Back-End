@@ -43,6 +43,13 @@ func TestRandomServerNumber(t *testing.T) {
 	c.NotEmpty(num)
 }
 
+func TestRandomNameDomain(t *testing.T) {
+	c := require.New(t)
+
+	nameDomain := RandomNameDomain()
+	c.NotEmpty(nameDomain)
+}
+
 func BenchmarkRandomNumber(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := RandomInt(1, 4)

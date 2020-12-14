@@ -14,19 +14,20 @@ var (
 
 // DBTX interface
 type DBTX interface {
-	StoreServer(ctx context.Context, server *models.Server) (*models.Server, error)
+	StoreServer(ctx context.Context, server *models.Server, domain *models.Domain) (*models.Server, error)
 	GetServer(ctx context.Context, serverID string) (*models.Server, error)
 	UpdateServer(ctx context.Context, serverID, sslgrade string) (*models.Server, error)
 	DeleteServer(ctx context.Context, serverID string) error
 	GetServers(ctx context.Context, domainID string) ([]*models.Server, error)
 	StoreDomain(ctx context.Context, domain *models.Domain) (*models.Domain, error)
 	GetDomain(ctx context.Context, domainID string) (*models.Domain, error)
-	UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain) (*models.Domain, error)
+	UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain, serverChanged bool) (*models.Domain, error)
 	DeleteDomain(ctx context.Context, domainID string) error
 	GetDomains(ctx context.Context, time string) ([]models.Domain, error)
 	GetRecordByName(domain *models.Domain) (objects []*models.Domain, err error)
 	NewRecord(domain *models.Domain) (*models.LogDomainStatus, error)
 	ReloadRecord(ctx context.Context) (myObjects map[string]*models.LogDomainStatus, err error)
+	GetLastDomain() []*models.Domain
 
 	/*
 		ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
@@ -57,8 +58,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 */
 
 // StoreServer function will store a server in the database.
-func StoreServer(ctx context.Context, server *models.Server) (*models.Server, error) {
-	return Default.StoreServer(ctx, server)
+func StoreServer(ctx context.Context, server *models.Server, domain *models.Domain) (*models.Server, error) {
+	return Default.StoreServer(ctx, server, domain)
 }
 
 // GetServer function will retrieve a server in the database.
@@ -92,8 +93,8 @@ func GetDomain(ctx context.Context, domainID string) (*models.Domain, error) {
 }
 
 // UpdateDomain function will update a domain struct
-func UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain) (*models.Domain, error) {
-	return Default.UpdateDomain(ctx, sslgrade, previouSSL, domain)
+func UpdateDomain(ctx context.Context, sslgrade, previouSSL string, domain *models.Domain, serverChanged bool) (*models.Domain, error) {
+	return Default.UpdateDomain(ctx, sslgrade, previouSSL, domain, serverChanged)
 }
 
 // DeleteDomain function will delete a domain struct
@@ -119,6 +120,11 @@ func NewRecord(domain *models.Domain) (*models.LogDomainStatus, error) {
 // ReloadRecord function will reload all records the newest log records
 func ReloadRecord(ctx context.Context) (myObjects map[string]*models.LogDomainStatus, err error) {
 	return Default.ReloadRecord(ctx)
+}
+
+// GetLastDomain function will return a list with the last records
+func GetLastDomain() []*models.Domain {
+	return Default.GetLastDomain()
 }
 
 func init() {

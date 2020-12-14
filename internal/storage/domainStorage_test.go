@@ -119,16 +119,15 @@ func TestUpdateDomain(t *testing.T) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domain1, err := UpdateDomain(ctx, "A", "", domain)
+	domain1, err := UpdateDomain(ctx, "A", "", domain, false)
 	c.NoError(err)
 	c.NotEmpty(domain1)
 
 	c.NotEqual(domain.SSLGrade, domain1.SSLGrade)
 	c.Equal(domain1.SSLGrade, "A")
-	//c.Equal(domain.ServerID, domain1.ServerID)
 	c.Equal(domain.DomainID, domain1.DomainID)
 	c.Equal(domain.ServerChanged, domain1.ServerChanged)
-	c.Equal(domain.PreviousSSLGrade, domain1.PreviousSSLGrade)
+	c.NotEqual(domain.PreviousSSLGrade, domain1.PreviousSSLGrade)
 	c.Equal(domain.Logo, domain1.Logo)
 	c.Equal(domain.Title, domain1.Title)
 	c.Equal(domain.IsDown, domain1.IsDown)
@@ -144,7 +143,7 @@ func TestUpdateDomainFailure(t *testing.T) {
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domain, err := UpdateDomain(ctx, "", "", nil)
+	domain, err := UpdateDomain(ctx, "", "", nil, false)
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrEmptyDomain, err.Error())
@@ -152,7 +151,7 @@ func TestUpdateDomainFailure(t *testing.T) {
 	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 
-	domain, err = UpdateDomain(ctx, "", "A", nil)
+	domain, err = UpdateDomain(ctx, "", "A", nil, false)
 	c.Error(err)
 	c.Nil(domain)
 	c.EqualError(ErrEmptyDomain, err.Error())
